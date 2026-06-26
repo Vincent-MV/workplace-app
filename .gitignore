@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+
+.env
+.env.*
+!.env.example
+
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+package-lock.json
+yarn.lock
