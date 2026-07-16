@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -21,6 +23,7 @@ import {
   Plus,
   Globe,
   Trash2,
+  LogOut
 } from "lucide-react";
 import { useState } from "react";
 
@@ -48,6 +51,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
+  const router = useRouter();
+
   const pathname = usePathname();
   const { workspaces, activeWorkspace, setActiveWorkspace, deleteWorkspace, loading } = useWorkspace();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -55,6 +60,15 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
   const handleDelete = async (id: string) => {
     await deleteWorkspace(id);
     setConfirmDelete(null);
+  };
+
+    const handleLogout = async () => {
+    // 1. Tell Supabase to end the session
+    await supabase.auth.signOut();
+    // 2. Redirect to the landing page
+    router.push("/");
+    // 3. Force Next.js to refresh server state (clears any cached auth data)
+    router.refresh(); 
   };
 
   return (
@@ -251,10 +265,21 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
         </div>
       </div>
 
+      <div className="mt-auto pt-4 border-t border-slate-800">
+        <button 
+          onClick={handleLogout}
+          className="px-15 flex items-center gap-2 w-full text-sm text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors p-2 rounded-lg"
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
+        </button>
+      </div>
+
       {/* Footer */}
       <div className="px-4 py-3 border-t border-slate-800">
         <p className="text-xs text-slate-600 text-center">Nexus v1.0</p>
       </div>
+
     </div>
   );
 }

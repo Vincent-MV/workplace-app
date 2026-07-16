@@ -1,34 +1,24 @@
 ﻿# Nexus Project Structure
-
 This document maps the main folders, routes, and data-connected files in the Nexus app.
 
 ## App Root
-
 The Nexus app lives in this directory:
-
-```text
-artifacts/nexus/
-```
-
+`artifacts/nexus/`
 This folder is a standalone Next.js app. If this is the folder you initialized with `git init`, then this is also your Git repository root.
 
 ## Main Folder Map
-
-```text
-app/                 Next.js App Router pages and API routes
-components/          Shared UI sections, layout pieces, modals, and data-connected widgets
-context/             Global React context/state used across routes
-lib/                 Supabase client, TypeScript data types, mock data, utilities
-public/              Static public assets served directly by the app
-src/components/ui/   Reusable UI primitives/components
-```
+- `app/`                 Next.js App Router pages and API routes
+- `components/`          Shared UI sections, layout pieces, modals, and data-connected widgets
+- `context/`             Global React context/state used across routes
+- `lib/`                 Supabase client, TypeScript data types, mock data, utilities
+- `public/`              Static public assets served directly by the app
+- `src/components/ui/`   Reusable UI primitives/components (shadcn/ui)
 
 ## Routes
-
 | URL route | File | Purpose |
-| --- | --- | --- |
-| `/` | `app/page.tsx` | Landing/entry page. Collects an email locally and routes to onboarding. This is not real auth yet. |
-| `/onboarding` | `app/onboarding/page.tsx` | Creates initial workspace rows in Supabase. Currently creates a random `user_id` with `crypto.randomUUID()`. |
+|---|---|---|
+| `/` | `app/page.tsx` | Landing/entry page. Handles real Supabase Auth (Sign In / Sign Up). Redirects to `/onboarding` for new users, `/dashboard` for returning users. |
+| `/onboarding` | `app/onboarding/page.tsx` | Creates initial workspace rows in Supabase. **Now uses real `auth.uid()`** instead of `crypto.randomUUID()`. |
 | `/dashboard` | `app/dashboard/page.tsx` | Main dashboard shell showing priorities, meetings, and habits. |
 | `/tasks` | `app/tasks/page.tsx` | Task list and task status updates. Reads and updates `tasks`. |
 | `/meetings` | `app/meetings/page.tsx` | Meeting list and meeting creation. Reads and inserts `meetings`. |
@@ -37,274 +27,50 @@ src/components/ui/   Reusable UI primitives/components
 | `/lessons` | `app/lessons/page.tsx` | Lessons/reflection page. Reads/writes `lessons` and `lesson_tags`. |
 | `/ai-tools` | `app/ai-tools/page.tsx` | Saved AI tools/resources. Reads/writes `ai_tools`. |
 | `/podcasts` | `app/podcasts/page.tsx` | Podcast/resource list. Reads/writes `podcasts`. |
-| `/photos` | `app/photos/page.tsx` | Photos route. Mostly UI placeholder unless connected later. |
-| `/location` | `app/location/page.tsx` | Location route. Mostly UI placeholder unless connected later. |
-| `/storage` | `app/storage/page.tsx` | Storage route. Mostly UI placeholder unless connected later. |
-| `/search` | `app/search/page.tsx` | Search route. Mostly UI placeholder unless connected later. |
+| `/photos` | `app/photos/page.tsx` | Photos route. UI placeholder. |
+| `/location` | `app/location/page.tsx` | Location route. UI placeholder. |
+| `/storage` | `app/storage/page.tsx` | Storage route. UI placeholder. |
+| `/search` | `app/search/page.tsx` | Search route. UI placeholder. |
+| `/reset-password` | `app/reset-password/page.tsx` | Handles Supabase password reset flow. |
 | `/api/ai` | `app/api/ai/route.ts` | Server-side API route that calls Gemini using `GEMINI_API_KEY`. |
 
 ## Core Layout Files
-
-### `app/layout.tsx`
-
-Root layout for the app. It imports global CSS and wraps every page in `WorkspaceProvider`.
-
-Important because every route can access workspace state through the context provider.
-
-### `components/layout/AppShell.tsx`
-
-Main authenticated-app layout. It renders:
-
-- left sidebar
-- top bar
-- accountability banner
-- right panel
-- add task modal
-- add meeting modal
-- add workspace modal
-- AI chat panel
-
-Most inner app pages render inside `AppShell`.
+- `app/layout.tsx`: Root layout for the app. Wraps every page in `WorkspaceProvider`.
+- `middleware.ts`: **CRITICAL**. Protects all authenticated routes. Redirects unauthenticated users to `/`. Redirects authenticated users with 0 workspaces to `/onboarding`.
+- `components/layout/AppShell.tsx`: Main authenticated-app layout. Renders left sidebar, top bar, accountability banner, right panel, and modals.
 
 ## Data and Backend Connection Files
+- `lib/supabase.ts`: Creates the Supabase browser client using `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- `lib/types.ts`: TypeScript interfaces that mirror the database tables (`Workspace`, `Task`, `Meeting`, `Habit`, etc.).
+- `lib/mock-data.ts`: **Deprecated/Empty**. The app now relies 100% on real Supabase data. Mock data is no longer used as a fallback.
+- `context/WorkspaceContext.tsx`: Global workspace state. **Now securely filters workspaces by `user_id = auth.uid()`**. No longer falls back to mock data.
 
-### `lib/supabase.ts`
-
-Creates the Supabase browser client:
-
-```ts
-createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
-```
-
-These variables are public by design:
-
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
-They can be visible in the browser. Real security must come from Supabase Auth and RLS policies.
-
-### `lib/types.ts`
-
-TypeScript interfaces that mirror your database tables:
-
-```text
-Workspace
-Task
-Meeting
-Habit
-HabitLog
-Note
-Lesson
-LessonTag
-Podcast
-AiTool
-AiConversation
-AiMessage
-```
-
-This file helps the UI know the shape of data coming from Supabase.
-
-### `lib/mock-data.ts`
-
-Fallback/demo data used when Supabase has no matching data or when the app enters demo mode.
-
-This lets the UI stay usable even if the database is empty.
-
-### `context/WorkspaceContext.tsx`
-
-Global workspace state for the app.
-
-It fetches active workspaces from Supabase:
-
-```ts
-supabase
-  .from("workspaces")
-  .select("*")
-  .eq("is_active", true)
-```
-
-It provides:
-
-```text
-workspaces
-activeWorkspace
-setActiveWorkspace
-refreshWorkspaces
-deleteWorkspace
-loading
-isDemo
-```
-
-Current caveat: it does not filter by authenticated user yet. Once Supabase Auth is implemented, workspace queries should be scoped to the current user through RLS and/or `user_id = auth.uid()` policies.
-
-## Supabase-Connected Pages and Components
-
-These files directly read or write Supabase data.
-
-### Pages
-
-```text
-app/onboarding/page.tsx
-app/tasks/page.tsx
-app/meetings/page.tsx
-app/habits/page.tsx
-app/notes/page.tsx
-app/lessons/page.tsx
-app/ai-tools/page.tsx
-app/podcasts/page.tsx
-```
-
-### Components
-
-```text
-components/modals/AddTaskModal.tsx
-components/modals/AddMeetingModal.tsx
-components/modals/AddWorkspaceModal.tsx
-components/dashboard/TodayPriorities.tsx
-components/dashboard/UpcomingMeetings.tsx
-components/dashboard/HabitsToday.tsx
-components/layout/RightPanel.tsx
-components/banners/AccountabilityBanner.tsx
-components/ai/AIChat.tsx
-```
-
-## AI Backend Flow
-
-### `components/ai/AIChat.tsx`
-
-Client-side chat UI. It stores and reads chat data from Supabase tables:
-
-```text
-ai_conversations
-ai_messages
-```
-
-It calls the backend route:
-
-```text
-/api/ai
-```
-
-### `app/api/ai/route.ts`
-
-Server-side route that calls Gemini with:
-
-```text
-GEMINI_API_KEY
-```
-
-This key must stay server-only and should never be renamed to `NEXT_PUBLIC_GEMINI_API_KEY`.
-
-## Current Auth and RLS Caveat
-
-The current app has a temporary identity flow:
-
-1. `/` asks for an email.
-2. The email is not verified yet.
-3. `/onboarding` creates a random `user_id` using `crypto.randomUUID()`.
-4. Rows are tied to that generated ID, not Supabase Auth's `auth.uid()`.
-
-For production or real personal data, the better flow is:
-
-```text
-Supabase Auth login or magic link
--> trusted user identity from auth.uid()
--> rows store user_id = auth.uid()
--> RLS policies enforce user_id = auth.uid()
-```
-
-Recommended RLS pattern for user-owned tables:
-
-```sql
-alter table tasks enable row level security;
-
-create policy "Users can read own tasks"
-on tasks
-for select
-using (user_id = auth.uid());
-
-create policy "Users can insert own tasks"
-on tasks
-for insert
-with check (user_id = auth.uid());
-
-create policy "Users can update own tasks"
-on tasks
-for update
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
-
-create policy "Users can delete own tasks"
-on tasks
-for delete
-using (user_id = auth.uid());
-```
-
-Use the same basic idea for private tables such as:
-
-```text
-workspaces
-tasks
-meetings
-notes
-habits
-lessons
-podcasts
-ai_tools
-ai_conversations
-```
+## ✅ Auth & RLS Status: COMPLETE
+The app now uses a **secure, production-ready identity flow**:
+1. User signs in/up via `/` using real Supabase Auth.
+2. Trusted user identity is established via `auth.uid()`.
+3. All database rows store `user_id = auth.uid()`.
+4. **Row Level Security (RLS)** is enabled on ALL tables (`users`, `workspaces`, `tasks`, `meetings`, `habits`, `notes`, `lessons`, `ai_conversations`, etc.).
+5. RLS policies strictly enforce `user_id = auth.uid()` for SELECT, INSERT, UPDATE, and DELETE operations, ensuring total data isolation between users.
 
 ## Environment Variables
+**Client-visible variables:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-Client-visible variables:
+**Server-only variables:**
+- `GEMINI_API_KEY`
+- `SESSION_SECRET` (if using advanced auth)
 
-```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
-Server-only variables:
-
-```text
-GEMINI_API_KEY
-SESSION_SECRET
-DATABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-```
-
-Never commit `.env.local` or real secrets to GitHub.
+*Never commit `.env.local` or real secrets to GitHub.*
 
 ## Files Usually Safe To Commit
-
-```text
-app/
-components/
-context/
-lib/
-public/
-src/
-components.json
-next-env.d.ts
-next.config.ts
-package.json
-postcss.config.mjs
-tsconfig.json
-```
+- `app/`, `components/`, `context/`, `lib/`, `public/`, `src/`
+- `middleware.ts`
+- `components.json`, `next-env.d.ts`, `next.config.ts`, `package.json`, `tsconfig.json`
+- `supabase-setup.sql` (Kept for reference on how RLS and triggers were configured)
 
 ## Files Usually Not Needed In GitHub
-
-```text
-node_modules/
-.next/
-.env.local
-.env.*
-.replit-artifact/
-supabase-rls-fix.sql
-```
-
-`supabase-rls-fix.sql` is not runtime app code. Keep it only if you intentionally want to version database policy scripts.
+- `node_modules/`
+- `.next/`
+- `.env.local`, `.env.*`
