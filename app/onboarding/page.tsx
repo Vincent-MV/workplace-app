@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
-import { WORKSPACE_PALETTE } from "@/lib/utils";
+// 1. Only import COLOR_PALETTE (removed WORKSPACE_PALETTE)
+import { COLOR_PALETTE } from "@/lib/utils"; 
 import {
   GraduationCap,
   Church,
@@ -15,8 +16,10 @@ import {
   ArrowRight,
   X,
 } from "lucide-react";
-import type { WorkspaceType } from "@/lib/types";
+// 2. Added the WorkspaceType import back!
+import type { WorkspaceType } from "@/lib/types"; 
 
+// 3. UNCOMMENTED the PRESETS array so your cards and database logic work!
 const PRESETS = [
   {
     name: "School",
@@ -51,13 +54,13 @@ const PRESETS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { refreshWorkspaces } = useWorkspace();
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(["School", "Altar Servers"])
-  );
+  const [selected, setSelected] = useState<Set<string>>(new Set([]));
   const [showCustom, setShowCustom] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customType, setCustomType] = useState<WorkspaceType>("personal");
-  const [customColor, setCustomColor] = useState(WORKSPACE_PALETTE[2]);
+  
+  // Uses the new COLOR_PALETTE array
+  const [customColor, setCustomColor] = useState(COLOR_PALETTE[2]); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -79,7 +82,18 @@ export default function OnboardingPage() {
     setLoading(true);
     setError("");
 
-    const userId = crypto.randomUUID();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setError("Please sign in again.");
+      router.push("/");
+      return;
+    }
+
+    const userId = user.id;
     const toInsert: { name: string; type: WorkspaceType; color: string; user_id: string; is_active: boolean }[] = [];
 
     PRESETS.filter((p) => selected.has(p.name)).forEach((p) => {
@@ -181,7 +195,8 @@ export default function OnboardingPage() {
             <div>
               <p className="text-xs text-slate-400 mb-2">Pick a color</p>
               <div className="flex gap-2 flex-wrap">
-                {WORKSPACE_PALETTE.map((c) => (
+                {/* 4. Changed WORKSPACE_PALETTE to COLOR_PALETTE here! */}
+                {COLOR_PALETTE.map((c) => (
                   <button
                     key={c}
                     onClick={() => setCustomColor(c)}

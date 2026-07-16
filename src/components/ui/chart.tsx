@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -137,7 +137,7 @@ const ChartTooltipContent = React.forwardRef<
       }
 
       const [item] = payload
-      const key = `${labelKey || item?.dataKey || item?.name || "value"}`
+      const key = `${labelKey || (item as any)?.dataKey || (item as any)?.name || "value"}`
       const itemConfig = getPayloadConfigFromPayload(config, item, key)
       const value =
         !labelKey && typeof label === "string"
@@ -186,7 +186,7 @@ const ChartTooltipContent = React.forwardRef<
           {payload
             .filter((item) => item.type !== "none")
             .map((item, index) => {
-              const key = `${nameKey || item.name || item.dataKey || "value"}`
+              const key = `${nameKey || (item as any)?.name || (item as any)?.dataKey || "value"}`
               const itemConfig = getPayloadConfigFromPayload(config, item, key)
               const indicatorColor = color || item.payload.fill || item.color
 
@@ -321,7 +321,7 @@ ChartLegendContent.displayName = "ChartLegend"
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
-  payload: unknown,
+  payload: any,
   key: string
 ) {
   if (typeof payload !== "object" || payload === null) {

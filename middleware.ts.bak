@@ -1,0 +1,80 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+
+// Routes that require authentication
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/tasks",
+  "/meetings",
+  "/habits",
+  "/notes",
+  "/lessons",
+  "/ai-tools",
+  "/podcasts",
+  "/photos",
+  "/location",
+  "/storage",
+  "/search",
+  "/onboarding",
+];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Only run on protected routes
+  const isProtected = PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (!isProtected) {
+    return NextResponse.next();
+  }
+
+  // Create a Supabase client scoped to this request
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          // Write updated cookies back to the response
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+        },
+      },
+    }
+  );
+
+  // Refresh the session (important — keeps it from expiring silently)
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // No session → kick them to the landing page
+  if (!session) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/";
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // ✅ Session exists — let them through
+  return NextResponse.next();
+}
+
+// Only run middleware on page routes (skip static files, images, API, etc.)
+export const config = {
+  matcher: [
+    /*
+     * Match all page routes except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico (favicon)
+     * - public folder assets
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

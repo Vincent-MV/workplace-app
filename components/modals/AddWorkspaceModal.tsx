@@ -5,6 +5,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import { WORKSPACE_PALETTE } from "@/lib/utils";
 import { X } from "lucide-react";
+import { COLOR_PALETTE } from "@/lib/utils";  
 
 interface Props {
   onClose: () => void;
@@ -13,7 +14,7 @@ interface Props {
 export default function AddWorkspaceModal({ onClose }: Props) {
   const { workspaces, refreshWorkspaces } = useWorkspace();
   const [name, setName] = useState("");
-  const [color, setColor] = useState(WORKSPACE_PALETTE[0]);
+  const [color, setColor] = useState(COLOR_PALETTE[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -84,7 +85,7 @@ export default function AddWorkspaceModal({ onClose }: Props) {
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-2">Color</label>
             <div className="flex flex-wrap gap-2">
-              {WORKSPACE_PALETTE.map((c) => (
+              {COLOR_PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"
