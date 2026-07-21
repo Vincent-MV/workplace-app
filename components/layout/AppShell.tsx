@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Menu, PanelRight } from "lucide-react";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import RightPanel from "./RightPanel";
@@ -8,8 +9,7 @@ import AccountabilityBanner from "@/components/banners/AccountabilityBanner";
 import AddTaskModal from "@/components/modals/AddTaskModal";
 import AddMeetingModal from "@/components/modals/AddMeetingModal";
 import AddWorkspaceModal from "@/components/modals/AddWorkspaceModal";
-import AIChat from "@/components/ai/AIChat";
-import { Menu, PanelRight } from "lucide-react";
+import { AIChat } from "@/components/ai/AIChat"; // Your existing path
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,7 +21,9 @@ export default function AppShell({ children }: AppShellProps) {
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addMeetingOpen, setAddMeetingOpen] = useState(false);
   const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
-  const [aiChatOpen, setAiChatOpen] = useState(false);
+  
+  // Consolidated to a single state variable for the AI Chat
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
   const handleTaskAdded = () => {
@@ -90,7 +92,8 @@ export default function AppShell({ children }: AppShellProps) {
       >
         <RightPanel
           refreshKey={taskRefreshKey}
-          onAskAI={() => setAiChatOpen(true)}
+          // This triggers the AI Chat from inside the Right Panel
+          onAskAI={() => setIsAiChatOpen(true)} 
         />
       </aside>
 
@@ -110,6 +113,9 @@ export default function AppShell({ children }: AppShellProps) {
         <PanelRight size={20} />
       </button>
 
+      {/* Render the AI Chat component globally so it overlays the app */}
+      <AIChat isOpen={isAiChatOpen} onClose={() => setIsAiChatOpen(false)} />
+        
       {/* Modals */}
       {addTaskOpen && (
         <AddTaskModal
@@ -127,9 +133,6 @@ export default function AppShell({ children }: AppShellProps) {
         <AddWorkspaceModal
           onClose={() => setAddWorkspaceOpen(false)}
         />
-      )}
-      {aiChatOpen && (
-        <AIChat onClose={() => setAiChatOpen(false)} />
       )}
     </div>
   );

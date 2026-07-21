@@ -1,267 +1,222 @@
-"use client";
+// components/ai/AIChat.tsx
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { supabase } from "@/lib/supabase";
-import type { AiConversation, AiMessage } from "@/lib/types";
-import { X, Send, Bot, Plus, ChevronLeft } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { X, Send, Loader2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase'; 
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { cn } from '@/lib/utils';
 
-interface Props {
+interface Message {
+  role: 'user' | 'model';
+  content: string;
+  action?: any;
+}
+
+interface AIChatProps {
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export default function AIChat({ onClose }: Props) {
-  const { workspaces, activeWorkspace } = useWorkspace();
-  const userId = workspaces[0]?.user_id;
+export function AIChat({ isOpen, onClose }: AIChatProps) {
+  const { activeWorkspace } = useWorkspace(); 
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const [conversations, setConversations] = useState<AiConversation[]>([]);
-  const [activeConv, setActiveConv] = useState<AiConversation | null>(null);
-  const [messages, setMessages] = useState<AiMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [view, setView] = useState<"list" | "chat">("list");
-  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!userId) return;
-    supabase
-      .from("ai_conversations")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setConversations(data ?? []));
-  }, [userId]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const openConversation = async (conv: AiConversation) => {
-    setActiveConv(conv);
-    setView("chat");
-    const { data } = await supabase
-      .from("ai_messages")
-      .select("*")
-      .eq("conversation_id", conv.id)
-      .order("created_at");
-    setMessages(data ?? []);
-  };
-
-  const newConversation = async () => {
-    if (!userId) return;
-    const { data, error } = await supabase
-      .from("ai_conversations")
-      .insert({
-        user_id: userId,
-        workspace_id: activeWorkspace?.id ?? null,
-        title: "New conversation",
-      })
-      .select()
-      .single();
-    if (!error && data) {
-      setConversations((prev) => [data, ...prev]);
-      setActiveConv(data);
-      setMessages([]);
-      setView("chat");
+  const parseAction = (text: string) => {
+    if (!text) return null; 
+    const match = text.match(/```json\s*([\s\S]*?)\s*```/);
+    if (match) {
+      try { return JSON.parse(match[1]); } catch (e) { return null; }
     }
+    return null;
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !activeConv || sending) return;
-    const userContent = input.trim();
-    setInput("");
-    setSending(true);
+  const handleSend = async () => {
+    if (!input.trim() || !activeWorkspace) return;
 
-    const { data: userMsg } = await supabase
-      .from("ai_messages")
-      .insert({ conversation_id: activeConv.id, role: "user", content: userContent })
-      .select()
-      .single();
-    if (userMsg) setMessages((prev) => [...prev, userMsg]);
+    const userMessage: Message = { role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
 
     try {
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userContent, history }),
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          workspaceId: activeWorkspace.id
+        }),
       });
-      const json = await res.json();
-      const assistantContent = json.response ?? "Sorry, I couldn't generate a response.";
 
-      const { data: assistantMsg } = await supabase
-        .from("ai_messages")
-        .insert({
-          conversation_id: activeConv.id,
-          role: "assistant",
-          content: assistantContent,
-        })
-        .select()
-        .single();
-      if (assistantMsg) setMessages((prev) => [...prev, assistantMsg]);
-
-      if (messages.length === 0) {
-        const title = userContent.slice(0, 50);
-        await supabase
-          .from("ai_conversations")
-          .update({ title })
-          .eq("id", activeConv.id);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === activeConv.id ? { ...c, title } : c))
-        );
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: "err",
-          conversation_id: activeConv.id,
-          role: "assistant",
-          content: "Error contacting AI. Check your GEMINI_API_KEY.",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    }
 
-    setSending(false);
+      const data = await res.json();
+      
+      // Safely parse action
+      const action = data.response ? parseAction(data.response) : null;
+      
+      const cleanText = data.response ? data.response.replace(/```json[\s\S]*?```/, '').trim() : '';
+      const aiMessage: Message = { role: 'model', content: cleanText || "Sorry, I encountered an error.", action };
+      
+      setMessages([...newMessages, aiMessage]);
+      setConversationId(data.conversationId);
+    } catch (error) {
+      console.error('AI Error:', error);
+      // Add error message to chat
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: `Error: ${error instanceof Error ? error.message : 'Failed to connect to AI'}. Please make sure you're logged in.` 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+    // Replace handleReschedule with this upgraded handleAction
+  const handleAction = async (action: any) => {
+    if (!action || !action.action || !activeWorkspace) return;
+
+    try {
+      if (action.action === 'reschedule_task') {
+        await supabase
+          .from('tasks')
+          .update({ due_date: action.newDate, status: 'pending' })
+          .eq('id', action.taskId);
+          
+        setMessages(prev => prev.map(m => 
+          m.action?.taskId === action.taskId ? { ...m, action: null, content: m.content + `\n\n✅ *Task rescheduled to ${action.newDate}*` } : m
+        ));
+      } 
+      else if (action.action === 'create_meeting') {
+        const { error } = await supabase
+          .from('meetings')
+          .insert({
+            workspace_id: activeWorkspace.id,
+            title: action.title,
+            start_time: action.startTime,
+            end_time: action.endTime,
+            status: 'scheduled' // Adjust if your schema uses a different status
+          });
+          
+        if (error) throw error;
+        
+        setMessages(prev => prev.map(m => 
+          m.action?.title === action.title ? { ...m, action: null, content: m.content + `\n\n✅ *Meeting "${action.title}" created!*` } : m
+        ));
+      }
+      else if (action.action === 'create_task') {
+        const { error } = await supabase
+          .from('tasks')
+          .insert({
+            workspace_id: activeWorkspace.id,
+            title: action.title,
+            due_date: action.dueDate,
+            status: 'pending'
+          });
+          
+        if (error) throw error;
+
+        setMessages(prev => prev.map(m => 
+          m.action?.title === action.title ? { ...m, action: null, content: m.content + `\n\n✅ *Task "${action.title}" created!*` } : m
+        ));
+      }
+    } catch (error) {
+      console.error('Action execution error:', error);
+      setMessages(prev => prev.map(m => 
+        m.action === action ? { ...m, content: m.content + `\n\n❌ *Failed to execute action. Check console.*` } : m
+      ));
+    }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[600px] flex flex-col animate-slide-up overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {view === "chat" && (
-              <button
-                onClick={() => setView("list")}
-                className="text-violet-200 hover:text-white transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
-            <Bot size={16} />
-            <span className="font-semibold text-sm">
-              {view === "chat" && activeConv
-                ? activeConv.title || "Conversation"
-                : "AI Assistant"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {view === "list" && (
-              <button
-                onClick={newConversation}
-                className="text-violet-200 hover:text-white transition-colors"
-                title="New conversation"
-              >
-                <Plus size={16} />
-              </button>
-            )}
-            <button onClick={onClose} className="text-violet-200 hover:text-white transition-colors">
-              <X size={16} />
-            </button>
-          </div>
+    <div className={cn(
+      "fixed inset-x-0 bottom-0 z-50 h-[80vh] bg-background border-t border-border shadow-lg flex flex-col",
+      "md:inset-auto md:right-4 md:bottom-4 md:top-20 md:w-96 md:h-[calc(100vh-6rem)] md:rounded-lg md:border"
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
+        <h2 className="font-semibold flex items-center gap-2">
+          <span className="text-primary">AI</span> Secretary
+        </h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Messages Area (Replaced ScrollArea with standard div) */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground text-sm mt-8">
+              <p>Hi! I'm your AI Secretary.</p>
+              <p className="mt-2">I can help you reschedule tasks, analyze your calendar, or draft agendas. What do you need?</p>
+            </div>
+          )}
+          {messages.map((msg, idx) => (
+            <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+              <div className={cn(
+                "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted"
+              )}>
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.action && msg.action.action === 'reschedule_task' && (
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    className="mt-2 w-full"
+                    onClick={() => handleAction(msg.action)}
+                  >
+                    <RefreshCw className="mr-2 h-3 w-3" /> 
+                    {msg.action.action === 'reschedule_task' && `Reschedule to ${msg.action.newDate}`}
+                    {msg.action.action === 'create_meeting' && `Create Meeting: ${msg.action.title}`}
+                    {msg.action.action === 'create_task' && `Create Task: ${msg.action.title}`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-3 py-2 text-sm flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" /> Thinking...
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
         </div>
+      </div>
 
-        {/* Conversation list */}
-        {view === "list" && (
-          <div className="flex-1 scrollable">
-            {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                <Bot size={40} className="opacity-30" />
-                <p className="text-sm">No conversations yet</p>
-                <button
-                  onClick={newConversation}
-                  className="px-4 py-2 bg-violet-600 text-white text-sm rounded-xl hover:bg-violet-700 transition-colors"
-                >
-                  Start chatting
-                </button>
-              </div>
-            ) : (
-              <div>
-                {conversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversation(conv)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-left transition-colors"
-                  >
-                    <Bot size={16} className="text-violet-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">
-                        {conv.title || "Untitled"}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {new Date(conv.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Chat view */}
-        {view === "chat" && (
-          <>
-            <div className="flex-1 scrollable p-4 space-y-3">
-              {messages.length === 0 && (
-                <div className="text-center text-slate-400 py-8">
-                  <Bot size={32} className="mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Ask me anything about your schedule, tasks, or goals.</p>
-                </div>
-              )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-violet-600 text-white rounded-br-sm"
-                        : "bg-slate-100 text-slate-800 rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {sending && (
-                <div className="flex justify-start">
-                  <div className="bg-slate-100 px-3 py-2 rounded-2xl rounded-bl-sm">
-                    <div className="flex gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:300ms]" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            <div className="flex items-center gap-2 p-3 border-t border-slate-100 flex-shrink-0">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                placeholder="Ask AI..."
-                disabled={sending}
-                className="flex-1 px-3 py-2 text-sm bg-slate-100 rounded-xl border border-transparent focus:border-violet-300 focus:bg-white focus:outline-none transition-colors text-slate-800 placeholder:text-slate-400"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || sending}
-                className="p-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-colors disabled:opacity-50"
-              >
-                <Send size={15} />
-              </button>
-            </div>
-          </>
-        )}
+      {/* Input Area */}
+      <div className="p-4 border-t shrink-0">
+        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask me to reschedule, draft an agenda..."
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={isLoading}
+          />
+          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
       </div>
     </div>
   );
