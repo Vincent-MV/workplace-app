@@ -31,6 +31,33 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+    // Existing scroll effect
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // ✅ NEW: Proactive Greeting Effect
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && activeWorkspace) {
+      const fetchProactiveGreeting = async () => {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('title, due_date, status')
+          .eq('workspace_id', activeWorkspace.id)
+          .in('status', ['todo', 'missed']) // Matches your schema's task_status enum
+          .limit(3);
+
+        if (tasks && tasks.length > 0) {
+          setMessages([{
+            role: 'model',
+            content: `Hi! I see you have ${tasks.length} pending task(s) in this workspace, like "${tasks[0].title}". Would you like me to help you reschedule them or draft an agenda?`
+          }]);
+        }
+      };
+      fetchProactiveGreeting();
+    }
+  }, [isOpen, messages.length, activeWorkspace]);
+
     const parseAction = (text: string) => {
     if (!text) return null; 
     
@@ -95,10 +122,6 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
       }
 
       const data = await res.json();
-      
-      // 🔍 DEBUG LOGS: Open your browser console (F12) to see exactly what the API returns
-      console.log("✅ API Response Data:", data);
-      console.log("Response text length:", data.response?.length);
 
       // 3. Parse the action and clean the text (remove the raw JSON block from the UI)
       const action = data.response ? parseAction(data.response) : null;
@@ -160,8 +183,6 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
         if (action.location && action.location !== 'No location specified') {
           meetingData.location = action.location;
         }
-
-        console.log("📤 Sending to Supabase (Correct Schema):", meetingData);
 
         // 4. Insert into Supabase
         const { error } = await supabase

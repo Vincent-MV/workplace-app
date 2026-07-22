@@ -32,7 +32,7 @@ This folder is a standalone Next.js app. If this is the folder you initialized w
 | `/storage` | `app/storage/page.tsx` | Storage route. UI placeholder. |
 | `/search` | `app/search/page.tsx` | Search route. UI placeholder. |
 | `/reset-password` | `app/reset-password/page.tsx` | Handles Supabase password reset flow. |
-| `/api/ai` | `app/api/ai/route.ts` | Server-side API route that calls Gemini using `GEMINI_API_KEY`. |
+| /api/ai | app/api/ai/route.ts | Server-side API route that calls Groq (Llama 3.3) using GROQ_API_KEY. |
 
 ## Core Layout Files
 - `app/layout.tsx`: Root layout for the app. Wraps every page in `WorkspaceProvider`.
