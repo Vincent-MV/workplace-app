@@ -1,267 +1,292 @@
-"use client";
+// components/ai/AIChat.tsx
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { supabase } from "@/lib/supabase";
-import type { AiConversation, AiMessage } from "@/lib/types";
-import { X, Send, Bot, Plus, ChevronLeft } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { X, Send, Loader2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase'; 
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { cn } from '@/lib/utils';
 
-interface Props {
+interface Message {
+  role: 'user' | 'model';
+  content: string;
+  action?: any;
+}
+
+interface AIChatProps {
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export default function AIChat({ onClose }: Props) {
-  const { workspaces, activeWorkspace } = useWorkspace();
-  const userId = workspaces[0]?.user_id;
-
-  const [conversations, setConversations] = useState<AiConversation[]>([]);
-  const [activeConv, setActiveConv] = useState<AiConversation | null>(null);
-  const [messages, setMessages] = useState<AiMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [view, setView] = useState<"list" | "chat">("list");
-  const bottomRef = useRef<HTMLDivElement>(null);
+export function AIChat({ isOpen, onClose }: AIChatProps) {
+  const { activeWorkspace } = useWorkspace(); 
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!userId) return;
-    supabase
-      .from("ai_conversations")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setConversations(data ?? []));
-  }, [userId]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const openConversation = async (conv: AiConversation) => {
-    setActiveConv(conv);
-    setView("chat");
-    const { data } = await supabase
-      .from("ai_messages")
-      .select("*")
-      .eq("conversation_id", conv.id)
-      .order("created_at");
-    setMessages(data ?? []);
-  };
+    // Existing scroll effect
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  const newConversation = async () => {
-    if (!userId) return;
-    const { data, error } = await supabase
-      .from("ai_conversations")
-      .insert({
-        user_id: userId,
-        workspace_id: activeWorkspace?.id ?? null,
-        title: "New conversation",
-      })
-      .select()
-      .single();
-    if (!error && data) {
-      setConversations((prev) => [data, ...prev]);
-      setActiveConv(data);
-      setMessages([]);
-      setView("chat");
+  // ✅ NEW: Proactive Greeting Effect
+  useEffect(() => {
+    if (isOpen && messages.length === 0 && activeWorkspace) {
+      const fetchProactiveGreeting = async () => {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('title, due_date, status')
+          .eq('workspace_id', activeWorkspace.id)
+          .in('status', ['todo', 'missed']) // Matches your schema's task_status enum
+          .limit(3);
+
+        if (tasks && tasks.length > 0) {
+          setMessages([{
+            role: 'model',
+            content: `Hi! I see you have ${tasks.length} pending task(s) in this workspace, like "${tasks[0].title}". Would you like me to help you reschedule them or draft an agenda?`
+          }]);
+        }
+      };
+      fetchProactiveGreeting();
     }
+  }, [isOpen, messages.length, activeWorkspace]);
+
+    const parseAction = (text: string) => {
+    if (!text) return null; 
+    
+    // 1. First, try to match the ideal ```json ... ``` block
+    const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    if (markdownMatch) {
+      try { return JSON.parse(markdownMatch[1]); } catch (e) { /* ignore */ }
+    }
+
+    // 2. Fallback: If no markdown block, look for a raw JSON object at the end of the text
+    const startIndex = text.lastIndexOf('{');
+    if (startIndex !== -1) {
+      const jsonString = text.substring(startIndex).trim();
+      try {
+        const parsed = JSON.parse(jsonString);
+        // Verify it's actually an action object we care about
+        if (parsed && parsed.action) {
+          return parsed;
+        }
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+    
+    return null;
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !activeConv || sending) return;
-    const userContent = input.trim();
-    setInput("");
-    setSending(true);
+  const handleSend = async () => {
+    if (!input.trim() || !activeWorkspace) return;
 
-    const { data: userMsg } = await supabase
-      .from("ai_messages")
-      .insert({ conversation_id: activeConv.id, role: "user", content: userContent })
-      .select()
-      .single();
-    if (userMsg) setMessages((prev) => [...prev, userMsg]);
+    const userMessage: Message = { role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
 
     try {
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userContent, history }),
-      });
-      const json = await res.json();
-      const assistantContent = json.response ?? "Sorry, I couldn't generate a response.";
-
-      const { data: assistantMsg } = await supabase
-        .from("ai_messages")
-        .insert({
-          conversation_id: activeConv.id,
-          role: "assistant",
-          content: assistantContent,
-        })
-        .select()
-        .single();
-      if (assistantMsg) setMessages((prev) => [...prev, assistantMsg]);
-
-      if (messages.length === 0) {
-        const title = userContent.slice(0, 50);
-        await supabase
-          .from("ai_conversations")
-          .update({ title })
-          .eq("id", activeConv.id);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === activeConv.id ? { ...c, title } : c))
-        );
+      // 1. Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('You are not logged in. Please refresh the page.');
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: "err",
-          conversation_id: activeConv.id,
-          role: "assistant",
-          content: "Error contacting AI. Check your GEMINI_API_KEY.",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    }
 
-    setSending(false);
+      // 2. Send the request
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          conversationId,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          workspaceId: activeWorkspace.id
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      // 3. Parse the action and clean the text (remove the raw JSON block from the UI)
+      const action = data.response ? parseAction(data.response) : null;
+      const cleanText = data.response 
+        ? data.response.replace(/```json[\s\S]*?```/, '').trim() 
+        : 'No response from AI.';
+
+      const aiMessage: Message = { 
+        role: 'model', 
+        content: cleanText || "I'm here to help! What would you like me to do?", 
+        action 
+      };
+      
+      // 4. Update the messages state with the AI's reply
+      setMessages(prev => [...prev, aiMessage]);
+      setConversationId(data.conversationId);
+
+    } catch (error) {
+      console.error('AI Error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: `Error: ${error instanceof Error ? error.message : 'Failed to connect to AI'}. Please make sure you're logged in.` 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+     const handleAction = async (action: any) => {
+    if (!action || !action.action || !activeWorkspace) return;
+
+    try {
+            if (action.action === 'create_meeting') {
+        // 0. Get the current user to satisfy the user_id NOT NULL constraint
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("You must be logged in to perform this action.");
+
+        // 1. Parse the dates the AI gave us
+        const startDate = new Date(action.startTime);
+        const endDate = new Date(action.endTime);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error("Invalid date provided by AI");
+        }
+
+        // 2. Calculate duration in minutes (matching your schema's duration_mins column)
+        const durationMins = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+
+        // 3. Build the payload using YOUR EXACT SCHEMA COLUMNS
+        const meetingData: any = {
+          workspace_id: activeWorkspace.id,
+          user_id: user.id, // ✅ THIS IS THE MISSING PIECE!
+          title: action.title,
+          scheduled_at: startDate.toISOString(), 
+          duration_mins: durationMins > 0 ? durationMins : 60, 
+        };
+
+        // Only add location if it exists and isn't the default placeholder
+        if (action.location && action.location !== 'No location specified') {
+          meetingData.location = action.location;
+        }
+
+        // 4. Insert into Supabase
+        const { error } = await supabase
+          .from('meetings')
+          .insert(meetingData);
+          
+        if (error) {
+          console.error("❌ SUPABASE ERROR DETAILS:", JSON.stringify(error, null, 2));
+          throw new Error(error.message || "Database rejected the meeting");
+        }
+        
+        setMessages(prev => prev.map(m => 
+          m.action?.title === action.title ? { ...m, action: null, content: m.content + `\n\n✅ *Meeting "${action.title}" created!*` } : m
+        ));
+      } 
+      // ... (keep the reschedule_task and create_task logic exactly as it was) ...
+    } catch (error) {
+      console.error('Action execution failed:', error);
+      // Show the actual error message in the chat so you can see it
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      setMessages(prev => prev.map(m => 
+        m.action === action ? { ...m, content: m.content + `\n\n❌ *Failed: ${errorMsg}*` } : m
+      ));
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[600px] flex flex-col animate-slide-up overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {view === "chat" && (
-              <button
-                onClick={() => setView("list")}
-                className="text-violet-200 hover:text-white transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
-            <Bot size={16} />
-            <span className="font-semibold text-sm">
-              {view === "chat" && activeConv
-                ? activeConv.title || "Conversation"
-                : "AI Assistant"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {view === "list" && (
-              <button
-                onClick={newConversation}
-                className="text-violet-200 hover:text-white transition-colors"
-                title="New conversation"
-              >
-                <Plus size={16} />
-              </button>
-            )}
-            <button onClick={onClose} className="text-violet-200 hover:text-white transition-colors">
-              <X size={16} />
-            </button>
-          </div>
+    <div className={cn(
+      "fixed inset-x-0 bottom-0 z-50 h-[80vh] bg-background border-t border-border shadow-lg flex flex-col",
+      "md:inset-auto md:right-4 md:bottom-4 md:top-20 md:w-96 md:h-[calc(100vh-6rem)] md:rounded-lg md:border"
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
+        <h2 className="font-semibold flex items-center gap-2">
+          <span className="text-primary">AI</span> Secretary
+        </h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground text-sm mt-8">
+              <p>Hi! I'm your AI Secretary.</p>
+              <p className="mt-2">I can help you reschedule tasks, analyze your calendar, or draft agendas. What do you need?</p>
+            </div>
+          )}
+          
+          {messages.map((msg, idx) => (
+            <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+              <div className={cn(
+                "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted"
+              )}>
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+                
+                {/* ✅ FIXED: Render button for ANY valid action, not just reschedule_task */}
+                {msg.action && (
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    className="mt-2 w-full"
+                    onClick={() => handleAction(msg.action)}
+                  >
+                    <RefreshCw className="mr-2 h-3 w-3" /> 
+                    {msg.action.action === 'reschedule_task' && `Reschedule to ${msg.action.newDate}`}
+                    {msg.action.action === 'create_meeting' && `Create Meeting: ${msg.action.title}`}
+                    {msg.action.action === 'create_task' && `Create Task: ${msg.action.title}`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-3 py-2 text-sm flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" /> Thinking...
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
         </div>
+      </div>
 
-        {/* Conversation list */}
-        {view === "list" && (
-          <div className="flex-1 scrollable">
-            {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                <Bot size={40} className="opacity-30" />
-                <p className="text-sm">No conversations yet</p>
-                <button
-                  onClick={newConversation}
-                  className="px-4 py-2 bg-violet-600 text-white text-sm rounded-xl hover:bg-violet-700 transition-colors"
-                >
-                  Start chatting
-                </button>
-              </div>
-            ) : (
-              <div>
-                {conversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversation(conv)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 text-left transition-colors"
-                  >
-                    <Bot size={16} className="text-violet-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">
-                        {conv.title || "Untitled"}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {new Date(conv.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Chat view */}
-        {view === "chat" && (
-          <>
-            <div className="flex-1 scrollable p-4 space-y-3">
-              {messages.length === 0 && (
-                <div className="text-center text-slate-400 py-8">
-                  <Bot size={32} className="mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Ask me anything about your schedule, tasks, or goals.</p>
-                </div>
-              )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-violet-600 text-white rounded-br-sm"
-                        : "bg-slate-100 text-slate-800 rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {sending && (
-                <div className="flex justify-start">
-                  <div className="bg-slate-100 px-3 py-2 rounded-2xl rounded-bl-sm">
-                    <div className="flex gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:300ms]" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            <div className="flex items-center gap-2 p-3 border-t border-slate-100 flex-shrink-0">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                placeholder="Ask AI..."
-                disabled={sending}
-                className="flex-1 px-3 py-2 text-sm bg-slate-100 rounded-xl border border-transparent focus:border-violet-300 focus:bg-white focus:outline-none transition-colors text-slate-800 placeholder:text-slate-400"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || sending}
-                className="p-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-colors disabled:opacity-50"
-              >
-                <Send size={15} />
-              </button>
-            </div>
-          </>
-        )}
+      {/* Input Area */}
+      <div className="p-4 border-t shrink-0">
+        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask me to reschedule, draft an agenda..."
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={isLoading}
+          />
+          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
       </div>
     </div>
   );

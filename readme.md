@@ -19,7 +19,7 @@
 
 - **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui (Radix UI)
 - **Backend & Database:** Supabase (PostgreSQL), Row Level Security (RLS)
-- **AI Integration:** Google Gemini API (`gemini-2.5-flash`) via `@google/generative-ai`
+- **AI Integration:** Groq API (`llama 3.3 70B`) via `groq-sdk`
 - **Deployment Target:** Vercel
 
 ##  Installation & Setup
@@ -30,7 +30,7 @@ Follow these steps to get Nexus running locally on your machine.
 Before you begin, ensure you have the following:
 - [Node.js](https://nodejs.org/) (v18 or higher) installed.
 - A free [Supabase](https://supabase.com/) project.
-- A free [Google AI Studio](https://aistudio.google.com/app/apikey) API key.
+- A free [Groq](https://console.groq.com/keys) API key.
 
 ### 2. Clone the Repository
 ```bash

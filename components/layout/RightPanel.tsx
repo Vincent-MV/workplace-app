@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import type { Task, Meeting } from "@/lib/types";
 import MiniCalendar from "@/components/dashboard/MiniCalendar";
 import { Bot, Mic, MapPin, MessageSquare } from "lucide-react";
+import { Button } from '@/components/ui/button';
 
 interface RightPanelProps {
   refreshKey: number;
@@ -83,6 +84,16 @@ export default function RightPanel({ refreshKey, onAskAI }: RightPanelProps) {
           <MessageSquare size={14} />
           <span className="text-slate-200 text-sm">Ask AI...</span>
         </button>
+      </div>
+        <div className="mt-auto pt-4 border-t">
+        <Button 
+          onClick={onAskAI} 
+          variant="outline" 
+          size="sm"
+          className="w-full gap-2"
+        >
+          <MessageSquare className="h-4 w-4" /> Ask AI Secretary
+        </Button>
       </div>
     </div>
   );
