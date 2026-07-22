@@ -1,41 +1,33 @@
 // app/api/ai/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// Initialize Groq with your API key
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    // 🔐 STEP 1: Read auth cookies directly
-    const cookieStore = await cookies();
+    // 🔐 STEP 1: Read the token from the Authorization header (This worked last time!)
+    const authHeader = req.headers.get('Authorization');
     
-    // Supabase stores tokens in these specific cookie names
-    const accessToken = cookieStore.get('sb-access-token')?.value;
-    const refreshToken = cookieStore.get('sb-refresh-token')?.value;
-
-    if (!accessToken || !refreshToken) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Unauthorized: Missing auth cookies' },
+        { error: 'Unauthorized: Missing Authorization header' },
         { status: 401 }
       );
     }
 
-    // 🔐 STEP 2: Create a fresh Supabase client FOR THIS REQUEST ONLY
-    // We pass the cookies explicitly so this client is authenticated
+    const token = authHeader.replace('Bearer ', '');
+
+    // 🔐 STEP 2: Create a Supabase client authenticated with this specific token
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        auth: {
-          persistSession: false, // Don't try to save session back to cookies in API route
-          autoRefreshToken: false, // Handle token refresh manually if needed later
-        },
         global: {
           headers: {
-            // Manually inject the auth cookies into every request this client makes
-            cookie: `sb-access-token=${accessToken}; sb-refresh-token=${refreshToken}`,
+            Authorization: `Bearer ${token}`,
           },
         },
       }
@@ -66,51 +58,55 @@ export async function POST(req: NextRequest) {
       .order('due_date', { ascending: true })
       .limit(10);
 
-    const { data: meetings } = await supabase
+      const { data: meetings } = await supabase
       .from('meetings')
-      .select('id, title, start_time, end_time, location')
+      .select('id, title, scheduled_at, duration_mins, location') // ✅ CORRECT COLUMNS
       .eq('workspace_id', workspaceId)
-      .gte('start_time', new Date().toISOString())
-      .order('start_time', { ascending: true })
+      .gte('scheduled_at', new Date().toISOString()) // ✅ CORRECT COLUMN
+      .order('scheduled_at', { ascending: true }) // ✅ CORRECT COLUMN
       .limit(10);
 
-    // 🤖 STEP 6: Build system prompt with meeting logic
-    const systemInstruction = `
-You are the AI Secretary for Nexus.
-Current date: ${new Date().toLocaleDateString()}
+    // 🤖 STEP 6: Build system prompt for Qwen/Llama via Groq
+     const systemInstruction = `
+        You are the AI Secretary for Nexus. You are AUTONOMOUS and PROACTIVE.
+        Current date: ${new Date().toLocaleDateString()}
 
-WORKSPACE CONTEXT:
-- Tasks: ${JSON.stringify(tasks || [])}
-- Meetings: ${JSON.stringify(meetings || [])}
+        WORKSPACE CONTEXT:
+        - Tasks: ${JSON.stringify(tasks || [])}
+        - Meetings: ${JSON.stringify(meetings || [])}
 
-RULES:
-1. If user asks to create a meeting *after* an existing one (e.g., "after the general assembly"), find that meeting in the list, then set the new meeting's:
-   - startTime = original meeting's endTime
-   - endTime = original meeting's endTime + 1 hour
-   - location = same as original meeting
-2. When confirming an action, output ONLY ONE JSON block at the very end, like:
-\`\`\`json
-{ "action": "create_meeting", "title": "...", "startTime": "...", "endTime": "...", "location": "..." }
-\`\`\`
-3. Never invent task IDs. For new items, omit ID.
-`;
+        CRITICAL RULES:
+        1. NEVER ask the user for more details. Calculate the dates and times yourself.
+        2. If the user says "Sunday", calculate the exact date for the upcoming Sunday based on the Current Date.
+        3. You MUST output exact ISO 8601 timestamps for startTime and endTime (e.g., "2026-07-26T15:00:00.000Z").
+        4. FORMATTING RULE: You may explain your reasoning briefly, but your response MUST end with the JSON block. Do not write any text after the JSON block.
 
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash', 
-      systemInstruction 
+        When you have a plan, output ONLY ONE JSON block at the very end to execute the action immediately. 
+
+        Example of correct behavior:
+        User: "Create a meeting after the general assembly at 3pm on Sunday for 1 hour at Church of Daraga"
+        You: "I will create the General Assembly for Sunday at 3:00 PM, and the follow-up meeting at 4:00 PM.
+        \`\`\`json
+        { "action": "create_meeting", "title": "General Assembly", "startTime": "2026-07-26T15:00:00.000Z", "endTime": "2026-07-26T16:00:00.000Z", "location": "Church of Daraga" }
+        \`\`\`"
+        `;
+    // Format messages for Groq's chat completion API
+    const groqMessages = [
+      { role: 'system', content: systemInstruction },
+      ...messages.map((m: any) => ({ role: m.role === 'model' ? 'assistant' : m.role, content: m.content }))
+    ];
+
+    // 🚀 STEP 7: Call Groq API (Using Qwen 2.5 32B, which is free and incredibly fast on Groq)
+   const chatCompletion = await groq.chat.completions.create({
+      messages: groqMessages,
+      model: 'llama-3.3-70b-versatile', // ✅ Current, stable, free, and highly capable
+      temperature: 0.2, // Low temperature ensures it follows your JSON rules strictly
+      max_tokens: 1024,
     });
 
-    const chat = model.startChat({
-      history: messages.slice(0, -1).map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }],
-      })),
-    });
+    const responseText = chatCompletion.choices[0]?.message?.content || 'No response from AI';
 
-    const result = await chat.sendMessage(messages[messages.length - 1].content);
-    const responseText = result.response.text();
-
-    // 💾 STEP 7: Persist conversation
+    // 💾 STEP 8: Persist conversation to Supabase
     let convId = conversationId;
     if (!convId) {
       const { data: newConv } = await supabase

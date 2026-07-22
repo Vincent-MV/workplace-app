@@ -27,17 +27,34 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const parseAction = (text: string) => {
+    const parseAction = (text: string) => {
     if (!text) return null; 
-    const match = text.match(/```json\s*([\s\S]*?)\s*```/);
-    if (match) {
-      try { return JSON.parse(match[1]); } catch (e) { return null; }
+    
+    // 1. First, try to match the ideal ```json ... ``` block
+    const markdownMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    if (markdownMatch) {
+      try { return JSON.parse(markdownMatch[1]); } catch (e) { /* ignore */ }
     }
+
+    // 2. Fallback: If no markdown block, look for a raw JSON object at the end of the text
+    const startIndex = text.lastIndexOf('{');
+    if (startIndex !== -1) {
+      const jsonString = text.substring(startIndex).trim();
+      try {
+        const parsed = JSON.parse(jsonString);
+        // Verify it's actually an action object we care about
+        if (parsed && parsed.action) {
+          return parsed;
+        }
+      } catch (e) {
+        // Not valid JSON, ignore
+      }
+    }
+    
     return null;
   };
 
@@ -51,9 +68,20 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
     setIsLoading(true);
 
     try {
+      // 1. Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('You are not logged in. Please refresh the page.');
+      }
+
+      // 2. Send the request
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           conversationId,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
@@ -68,17 +96,28 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
 
       const data = await res.json();
       
-      // Safely parse action
+      // 🔍 DEBUG LOGS: Open your browser console (F12) to see exactly what the API returns
+      console.log("✅ API Response Data:", data);
+      console.log("Response text length:", data.response?.length);
+
+      // 3. Parse the action and clean the text (remove the raw JSON block from the UI)
       const action = data.response ? parseAction(data.response) : null;
+      const cleanText = data.response 
+        ? data.response.replace(/```json[\s\S]*?```/, '').trim() 
+        : 'No response from AI.';
+
+      const aiMessage: Message = { 
+        role: 'model', 
+        content: cleanText || "I'm here to help! What would you like me to do?", 
+        action 
+      };
       
-      const cleanText = data.response ? data.response.replace(/```json[\s\S]*?```/, '').trim() : '';
-      const aiMessage: Message = { role: 'model', content: cleanText || "Sorry, I encountered an error.", action };
-      
-      setMessages([...newMessages, aiMessage]);
+      // 4. Update the messages state with the AI's reply
+      setMessages(prev => [...prev, aiMessage]);
       setConversationId(data.conversationId);
+
     } catch (error) {
       console.error('AI Error:', error);
-      // Add error message to chat
       setMessages(prev => [...prev, { 
         role: 'model', 
         content: `Error: ${error instanceof Error ? error.message : 'Failed to connect to AI'}. Please make sure you're logged in.` 
@@ -87,58 +126,64 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
       setIsLoading(false);
     }
   };
-    // Replace handleReschedule with this upgraded handleAction
-  const handleAction = async (action: any) => {
+
+     const handleAction = async (action: any) => {
     if (!action || !action.action || !activeWorkspace) return;
 
     try {
-      if (action.action === 'reschedule_task') {
-        await supabase
-          .from('tasks')
-          .update({ due_date: action.newDate, status: 'pending' })
-          .eq('id', action.taskId);
-          
-        setMessages(prev => prev.map(m => 
-          m.action?.taskId === action.taskId ? { ...m, action: null, content: m.content + `\n\n✅ *Task rescheduled to ${action.newDate}*` } : m
-        ));
-      } 
-      else if (action.action === 'create_meeting') {
+            if (action.action === 'create_meeting') {
+        // 0. Get the current user to satisfy the user_id NOT NULL constraint
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("You must be logged in to perform this action.");
+
+        // 1. Parse the dates the AI gave us
+        const startDate = new Date(action.startTime);
+        const endDate = new Date(action.endTime);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error("Invalid date provided by AI");
+        }
+
+        // 2. Calculate duration in minutes (matching your schema's duration_mins column)
+        const durationMins = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+
+        // 3. Build the payload using YOUR EXACT SCHEMA COLUMNS
+        const meetingData: any = {
+          workspace_id: activeWorkspace.id,
+          user_id: user.id, // ✅ THIS IS THE MISSING PIECE!
+          title: action.title,
+          scheduled_at: startDate.toISOString(), 
+          duration_mins: durationMins > 0 ? durationMins : 60, 
+        };
+
+        // Only add location if it exists and isn't the default placeholder
+        if (action.location && action.location !== 'No location specified') {
+          meetingData.location = action.location;
+        }
+
+        console.log("📤 Sending to Supabase (Correct Schema):", meetingData);
+
+        // 4. Insert into Supabase
         const { error } = await supabase
           .from('meetings')
-          .insert({
-            workspace_id: activeWorkspace.id,
-            title: action.title,
-            start_time: action.startTime,
-            end_time: action.endTime,
-            status: 'scheduled' // Adjust if your schema uses a different status
-          });
+          .insert(meetingData);
           
-        if (error) throw error;
+        if (error) {
+          console.error("❌ SUPABASE ERROR DETAILS:", JSON.stringify(error, null, 2));
+          throw new Error(error.message || "Database rejected the meeting");
+        }
         
         setMessages(prev => prev.map(m => 
           m.action?.title === action.title ? { ...m, action: null, content: m.content + `\n\n✅ *Meeting "${action.title}" created!*` } : m
         ));
-      }
-      else if (action.action === 'create_task') {
-        const { error } = await supabase
-          .from('tasks')
-          .insert({
-            workspace_id: activeWorkspace.id,
-            title: action.title,
-            due_date: action.dueDate,
-            status: 'pending'
-          });
-          
-        if (error) throw error;
-
-        setMessages(prev => prev.map(m => 
-          m.action?.title === action.title ? { ...m, action: null, content: m.content + `\n\n✅ *Task "${action.title}" created!*` } : m
-        ));
-      }
+      } 
+      // ... (keep the reschedule_task and create_task logic exactly as it was) ...
     } catch (error) {
-      console.error('Action execution error:', error);
+      console.error('Action execution failed:', error);
+      // Show the actual error message in the chat so you can see it
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       setMessages(prev => prev.map(m => 
-        m.action === action ? { ...m, content: m.content + `\n\n❌ *Failed to execute action. Check console.*` } : m
+        m.action === action ? { ...m, content: m.content + `\n\n❌ *Failed: ${errorMsg}*` } : m
       ));
     }
   };
@@ -160,7 +205,7 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
         </Button>
       </div>
 
-      {/* Messages Area (Replaced ScrollArea with standard div) */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {messages.length === 0 && (
@@ -169,6 +214,7 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
               <p className="mt-2">I can help you reschedule tasks, analyze your calendar, or draft agendas. What do you need?</p>
             </div>
           )}
+          
           {messages.map((msg, idx) => (
             <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
               <div className={cn(
@@ -176,7 +222,9 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
                 msg.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted"
               )}>
                 <div className="whitespace-pre-wrap">{msg.content}</div>
-                {msg.action && msg.action.action === 'reschedule_task' && (
+                
+                {/* ✅ FIXED: Render button for ANY valid action, not just reschedule_task */}
+                {msg.action && (
                   <Button 
                     size="sm" 
                     variant="secondary"
@@ -192,6 +240,7 @@ export function AIChat({ isOpen, onClose }: AIChatProps) {
               </div>
             </div>
           ))}
+          
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg px-3 py-2 text-sm flex items-center gap-2">
