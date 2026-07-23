@@ -5,7 +5,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Meeting } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
-import { Calendar, MapPin, Clock } from "lucide-react";
+import { Calendar, MapPin, Clock, Trash2 } from "lucide-react";
 import { MOCK_MEETINGS } from "@/lib/mock-data";
 
 interface Props {
@@ -44,6 +44,20 @@ export default function UpcomingMeetings({ refreshKey }: Props) {
         setLoading(false);
       });
   }, [activeWorkspace, refreshKey, isDemo]);
+
+  const handleDelete = async (meetingId: string) => {
+    if (!confirm("Are you sure you want to delete this meeting?")) return;
+
+    const { error } = await supabase.from("meetings").delete().eq("id", meetingId);
+
+    if (error) {
+      console.error("Failed to delete meeting:", error);
+      alert("Could not delete meeting.");
+    } else {
+      // Instantly remove from UI
+      setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+    }
+  };
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
 
@@ -94,14 +108,25 @@ export default function UpcomingMeetings({ refreshKey }: Props) {
                 <p className="text-xs text-slate-400 mt-1 line-clamp-1">{m.agenda}</p>
               )}
             </div>
-            {ws && (
-              <span
-                className="text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: `${ws.color}15`, color: ws.color }}
+            
+            {/* Right side: Badge + Delete Button */}
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              {ws && (
+                <span
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: `${ws.color}15`, color: ws.color }}
+                >
+                  {ws.name}
+                </span>
+              )}
+              <button
+                onClick={() => handleDelete(m.id)}
+                className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
+                title="Delete meeting"
               >
-                {ws.name}
-              </span>
-            )}
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         );
       })}
