@@ -6,7 +6,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Meeting } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
-import { Calendar, MapPin, Clock, Plus, X } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, X, Trash2 } from "lucide-react";
 
 export default function MeetingsPage() {
   const { activeWorkspace, workspaces } = useWorkspace();
@@ -46,6 +46,23 @@ export default function MeetingsPage() {
     fetchMeetings();
   };
 
+  const handleDeleteMeeting = async (meetingId: string) => {
+    if (!confirm("Are you sure you want to delete this meeting?")) return;
+
+    const { error } = await supabase
+      .from('meetings')
+      .delete()
+      .eq('id', meetingId);
+
+    if (error) {
+      console.error("Failed to delete meeting:", error);
+      alert("Could not delete meeting. Check console for details.");
+    } else {
+      // Smoothly remove it from the UI without reloading the page
+      setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+    }
+  };
+
   const upcoming = meetings.filter((m) => new Date(m.scheduled_at) >= new Date());
   const past = meetings.filter((m) => new Date(m.scheduled_at) < new Date());
 
@@ -72,14 +89,25 @@ export default function MeetingsPage() {
               )}
             </div>
           </div>
-          {ws && (
-            <span
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: `${ws.color}15`, color: ws.color }}
+          
+          {/* Right side: Badge + Delete Button */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            {ws && (
+              <span
+                className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: `${ws.color}15`, color: ws.color }}
+              >
+                {ws.name}
+              </span>
+            )}
+            <button
+              onClick={() => handleDeleteMeeting(m.id)}
+              className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
+              title="Delete meeting"
             >
-              {ws.name}
-            </span>
-          )}
+              <Trash2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
     );

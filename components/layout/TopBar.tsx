@@ -79,7 +79,7 @@ export default function TopBar({ onMenuClick, onAddTask, onAddMeeting, onRightPa
             style={{ backgroundColor: accentColor }}
             aria-label="More add options"
           >
-            <ChevronDown size={13} />
+            <ChevronDown size={20} />
           </button>
 
           {dropdownOpen && (
