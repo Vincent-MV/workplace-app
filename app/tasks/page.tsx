@@ -6,7 +6,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task } from "@/lib/types";
 import { todayISO, formatDate, daysAgo, cn } from "@/lib/utils";
-import { CheckSquare, Square, Calendar, CheckCircle, Clock } from "lucide-react";
+import { CheckSquare, Square, Calendar, CheckCircle, Clock, Trash2 } from "lucide-react";
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: "#ef4444",
@@ -63,6 +63,21 @@ export default function TasksPage() {
   const markDone = async (task: Task) => {
     await supabase.from("tasks").update({ confirmed: true, status: "done" }).eq("id", task.id);
     fetchTasks();
+  };
+
+  // ✅ NEW: Delete Task Function
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+
+    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+
+    if (error) {
+      console.error("Failed to delete task:", error);
+      alert("Could not delete task.");
+    } else {
+      // Instantly remove from UI
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    }
   };
 
   const handleReschedule = async (task: Task) => {
@@ -174,6 +189,8 @@ export default function TasksPage() {
                         <span className="text-xs text-slate-400">{STATUS_LABELS[task.status]}</span>
                       </div>
                     </div>
+                    
+                    {/* Right side: Workspace Badge, Priority Dot, and Delete Button */}
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {ws && (
                         <span
@@ -187,6 +204,14 @@ export default function TasksPage() {
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
                       />
+                      {/* ✅ NEW: Delete Button */}
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 ml-1"
+                        title="Delete task"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
 
