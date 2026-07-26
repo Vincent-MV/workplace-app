@@ -19,9 +19,11 @@ const PRIORITIES: { label: string; value: TaskPriority; color: string }[] = [
 ];
 
 export default function AddTaskModal({ onClose, onSaved }: Props) {
-  const { workspaces, activeWorkspace } = useWorkspace();
+  // ✅ We only need activeWorkspace now. No need for the full workspaces list.
+  const { activeWorkspace } = useWorkspace();
+  
   const [title, setTitle] = useState("");
-  const [workspaceId, setWorkspaceId] = useState(activeWorkspace?.id ?? workspaces[0]?.id ?? "");
+  // ❌ REMOVED: const [workspaceId, setWorkspaceId] = useState(...)
   const [dueDate, setDueDate] = useState(todayISO());
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [loading, setLoading] = useState(false);
@@ -30,17 +32,21 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { setError("Title is required"); return; }
-    if (!workspaceId) { setError("Select a workspace"); return; }
+    
+    // ✅ NEW: Safety check to ensure a workspace is active
+    if (!activeWorkspace) { 
+      setError("No workspace selected. Please switch workspaces and try again."); 
+      return; 
+    }
+
     setLoading(true);
     setError("");
 
-    const ws = workspaces.find((w) => w.id === workspaceId);
-    if (!ws) { setError("Workspace not found"); setLoading(false); return; }
-
+    // ✅ UPDATED: Auto-assign workspace_id and user_id from the active workspace
     const { error: err } = await supabase.from("tasks").insert({
       title: title.trim(),
-      workspace_id: workspaceId,
-      user_id: ws.user_id,
+      workspace_id: activeWorkspace.id,
+      user_id: activeWorkspace.user_id,
       due_date: dueDate || null,
       priority,
       status: "todo",
@@ -60,7 +66,21 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
       <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md animate-slide-up">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800">Add Task</h2>
+          <div>
+            <h2 className="text-base font-semibold text-slate-800">Add Task</h2>
+            {/* ✅ NEW: Visual badge showing where the task is going */}
+            {activeWorkspace && (
+              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                Adding to:
+                <span
+                  className="font-medium px-2 py-0.5 rounded-full text-[10px]"
+                  style={{ backgroundColor: `${activeWorkspace.color}15`, color: activeWorkspace.color }}
+                >
+                  {activeWorkspace.name}
+                </span>
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
             <X size={18} />
           </button>
@@ -80,31 +100,7 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
             />
           </div>
 
-          {/* Workspace */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-2">Workspace</label>
-            <div className="flex flex-wrap gap-2">
-              {workspaces.map((ws) => (
-                <button
-                  key={ws.id}
-                  type="button"
-                  onClick={() => setWorkspaceId(ws.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all"
-                  style={{
-                    borderColor: workspaceId === ws.id ? ws.color : "transparent",
-                    backgroundColor: workspaceId === ws.id ? `${ws.color}15` : "#f1f5f9",
-                    color: workspaceId === ws.id ? ws.color : "#64748b",
-                  }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: ws.color }}
-                  />
-                  {ws.name}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* ❌ REMOVED: The entire Workspace selection section is gone! */}
 
           {/* Due date */}
           <div>
@@ -113,7 +109,7 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-700"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-700"
             />
           </div>
 
