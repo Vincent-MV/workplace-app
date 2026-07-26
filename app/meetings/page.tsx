@@ -1,23 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import AppShell from "@/components/layout/AppShell";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Meeting } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
-import { Calendar, MapPin, Clock, Plus, X, Trash2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, X, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function MeetingsPage() {
   const { activeWorkspace, workspaces } = useWorkspace();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  
+  // NEW: State to toggle advanced fields
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
   const [form, setForm] = useState({
     title: "", agenda: "", scheduled_at: "", duration_mins: 60, location: "",
   });
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // NEW: Auto-resize the agenda textarea as the user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      // Cap the height at 120px, then let it scroll internally
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [form.agenda, showForm]);
 
   const fetchMeetings = async () => {
     if (!activeWorkspace) return;
@@ -36,29 +51,28 @@ export default function MeetingsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeWorkspace || !form.title.trim() || !form.scheduled_at) return;
+    
     await supabase.from("meetings").insert({
       ...form,
       workspace_id: activeWorkspace.id,
       user_id: activeWorkspace.user_id,
     });
+    
     setForm({ title: "", agenda: "", scheduled_at: "", duration_mins: 60, location: "" });
     setShowForm(false);
+    setShowAdvanced(false); // Reset toggle
     fetchMeetings();
   };
 
   const handleDeleteMeeting = async (meetingId: string) => {
     if (!confirm("Are you sure you want to delete this meeting?")) return;
 
-    const { error } = await supabase
-      .from('meetings')
-      .delete()
-      .eq('id', meetingId);
+    const { error } = await supabase.from('meetings').delete().eq('id', meetingId);
 
     if (error) {
       console.error("Failed to delete meeting:", error);
       alert("Could not delete meeting. Check console for details.");
     } else {
-      // Smoothly remove it from the UI without reloading the page
       setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
     }
   };
@@ -90,7 +104,6 @@ export default function MeetingsPage() {
             </div>
           </div>
           
-          {/* Right side: Badge + Delete Button */}
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             {ws && (
               <span
@@ -129,41 +142,102 @@ export default function MeetingsPage() {
           </button>
         </div>
 
+      
         {showForm && (
-          <form onSubmit={handleCreate} className="p-4 bg-white rounded-xl border border-slate-200 space-y-3 animate-slide-down">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-slate-700">New Meeting</h3>
-              <button type="button" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
+          <form onSubmit={handleCreate} className="p-4 bg-white rounded-xl border border-slate-200 space-y-4 animate-slide-down">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700">New Meeting</h3>
+                {activeWorkspace && (
+                  <p className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
+                    Adding to: 
+                    <span className="font-medium px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${activeWorkspace.color}15`, color: activeWorkspace.color }}>
+                      {activeWorkspace.name}
+                    </span>
+                  </p>
+                )}
+              </div>
+              <button type="button" onClick={() => { setShowForm(false); setShowAdvanced(false); }} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <input
-              required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Meeting title *" className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
-            />
-            <textarea
-              value={form.agenda} onChange={(e) => setForm({ ...form, agenda: e.target.value })}
-              placeholder="Agenda (optional)" rows={2}
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
-            />
-            <div className="flex gap-2 flex-wrap">
+
+            {/* 1. Essential Fields (Always Visible) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Meeting title *</label>
               <input
-                type="datetime-local" required value={form.scheduled_at}
-                onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
-                className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-              <input
-                type="number" min={15} step={15} value={form.duration_mins}
-                onChange={(e) => setForm({ ...form, duration_mins: Number(e.target.value) })}
-                className="w-24 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
-                placeholder="Mins"
-              />
-              <input
-                value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="Location" className="flex-1 min-w-32 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                autoFocus
+                required 
+                value={form.title} 
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="What's the meeting about?" 
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
             </div>
-            <button type="submit" className="w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold transition-colors">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Date & time *</label>
+                <input
+                  type="datetime-local" 
+                  required 
+                  value={form.scheduled_at}
+                  onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Duration (min)</label>
+                <input
+                  type="number" 
+                  min={15} 
+                  step={15} 
+                  value={form.duration_mins}
+                  onChange={(e) => setForm({ ...form, duration_mins: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  placeholder="60"
+                />
+              </div>
+            </div>
+
+            {/* 2. Progressive Disclosure Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors w-full justify-center py-1"
+            >
+              {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {showAdvanced ? "Less options" : "+ More options (Location & Agenda)"}
+            </button>
+
+            {/* 3. Advanced Fields (Hidden by default) */}
+            {showAdvanced && (
+              <div className="space-y-3 animate-slide-down pt-2 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Location</label>
+                  <input
+                    value={form.location} 
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder="Room 101, Zoom link, etc." 
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Agenda</label>
+                  <textarea
+                    ref={textareaRef}
+                    value={form.agenda} 
+                    onChange={(e) => setForm({ ...form, agenda: e.target.value })}
+                    placeholder="Topics to cover..." 
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none overflow-y-auto"
+                    style={{ minHeight: "80px" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button type="submit" className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold transition-colors">
               Schedule Meeting
             </button>
           </form>
