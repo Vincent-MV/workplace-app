@@ -9,7 +9,10 @@ import AccountabilityBanner from "@/components/banners/AccountabilityBanner";
 import AddTaskModal from "@/components/modals/AddTaskModal";
 import AddMeetingModal from "@/components/modals/AddMeetingModal";
 import AddWorkspaceModal from "@/components/modals/AddWorkspaceModal";
-import { AIChat } from "@/components/ai/AIChat"; // Your existing path
+import { AIChat } from "@/components/ai/AIChat";
+
+// ✅ 1. IMPORT THE DAILY BRIEFING COMPONENT
+import DailyBriefing from "@/components/dashboard/DailyBriefing";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -22,7 +25,6 @@ export default function AppShell({ children }: AppShellProps) {
   const [addMeetingOpen, setAddMeetingOpen] = useState(false);
   const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
   
-  // Consolidated to a single state variable for the AI Chat
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
@@ -69,8 +71,16 @@ export default function AppShell({ children }: AppShellProps) {
           onRightPanelToggle={() => setRightPanelOpen((o) => !o)}
         />
         <AccountabilityBanner refreshKey={taskRefreshKey} />
-        <main className="flex-1 scrollable p-4 md:p-6">
+        
+        {/* ✅ 2. ADDED space-y-6 TO MAIN FOR BREATHING ROOM */}
+        <main className="flex-1 scrollable p-4 md:p-6 space-y-6">
+          
+          {/* ✅ 3. INSERT THE DAILY BRIEFING HERE */}
+          <DailyBriefing />
+
+          {/* The actual page content (Tasks, Meetings, etc.) renders below it */}
           {children}
+          
         </main>
       </div>
 
@@ -92,7 +102,6 @@ export default function AppShell({ children }: AppShellProps) {
       >
         <RightPanel
           refreshKey={taskRefreshKey}
-          // This triggers the AI Chat from inside the Right Panel
           onAskAI={() => setIsAiChatOpen(true)} 
         />
       </aside>
