@@ -62,35 +62,53 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
-  const handleAuth = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (!signInError) {
+    // 1. Try to sign in first
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password 
+    });
+    
+    // If sign in is successful, go to dashboard
+    if (!signInError && signInData.user) {
       router.push("/dashboard");
       return;
     }
 
-    if (signInError.message.includes("Invalid login credentials")) {
-      const { error: signUpError } = await supabase.auth.signUp({
+    // 2. If it fails because credentials are invalid, try to sign them up
+    if (signInError?.message.includes("Invalid login credentials")) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+        options: { 
+          // Use your main production URL, not window.location.origin which might be a preview URL
+          emailRedirectTo: "https://workplace-app-puce.vercel.app/auth/callback" 
+        },
       });
+
       if (signUpError) {
         setMessage({ text: signUpError.message, ok: false });
         setLoading(false);
         return;
       }
-      setMessage({ text: "✓ Account created! Redirecting...", ok: true });
-      setTimeout(() => router.push("/onboarding"), 1500);
+
+      // 3. SUCCESS: But they are NOT logged in yet if email confirmation is on.
+      setMessage({ 
+        text: "✓ Account created! Please check your email to confirm your account before logging in.", 
+        ok: true 
+      });
+      
+      // Do NOT redirect to /onboarding yet. Let them check their email.
       setLoading(false);
       return;
     }
 
-    setMessage({ text: signInError.message, ok: false });
+    // 4. Handle any other errors (e.g., weak password, network error)
+    setMessage({ text: signInError?.message || "An error occurred", ok: false });
     setLoading(false);
   };
 
