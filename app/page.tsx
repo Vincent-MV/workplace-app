@@ -16,7 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import LightRays from "@/components/LightRays"; // Make sure this file exists!
+import LightRays from "@/components/LightRays";
 
 const FEATURES = [
   { icon: CheckSquare, label: "Tasks & Priorities", color: "text-indigo-400" },
@@ -27,7 +27,6 @@ const FEATURES = [
   { icon: Sparkles, label: "Multi-Workspace", color: "text-cyan-400" },
 ];
 
-// Base64 fractal-noise SVG, tiled — kills banding on the dark gradient without a network request
 const NOISE_BG =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==";
 
@@ -47,16 +46,14 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { 
-      duration: 0.55, 
-      ease: [0.16, 1, 0.3, 1] as const
-    },
+    transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const },
   },
 };
 
 export default function LandingPage() {
   const router = useRouter();
   const [view, setView] = useState<View>("auth");
+  const [isSignUp, setIsSignUp] = useState(false); // 👈 NEW: Toggle between Sign In and Sign Up
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,49 +64,52 @@ export default function LandingPage() {
     setLoading(true);
     setMessage(null);
 
-    // 1. Try to sign in first
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
-      email, 
-      password 
-    });
-    
-    // If sign in is successful, go to dashboard
-    if (!signInError && signInData.user) {
-      router.push("/dashboard");
-      return;
-    }
+    // 🧹 CRITICAL: Clear any existing session first! 
+    // This prevents the "seeing the wrong user's workplace" bug.
+    await supabase.auth.signOut();
 
-    // 2. If it fails because credentials are invalid, try to sign them up
-    if (signInError?.message.includes("Invalid login credentials")) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    if (isSignUp) {
+      // ─── SIGN UP FLOW ───
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { 
-          // Use your main production URL, not window.location.origin which might be a preview URL
-          emailRedirectTo: "https://workplace-app-puce.vercel.app/auth/callback" 
+        options: {
+          emailRedirectTo: "https://workplace-app-puce.vercel.app/auth/callback",
         },
       });
 
-      if (signUpError) {
-        setMessage({ text: signUpError.message, ok: false });
+      if (error) {
+        setMessage({ text: error.message, ok: false });
         setLoading(false);
-        return;
+      } else if (data.session) {
+        // ✅ Email confirmation is OFF: User is logged in immediately!
+        setMessage({ text: "✓ Account created! Redirecting to onboarding...", ok: true });
+        setTimeout(() => router.push("/onboarding"), 1000);
+      } else {
+        // ⏳ Email confirmation is ON: User needs to check email
+        setMessage({
+          text: "✓ Account created! Please check your email to confirm your account, then log in.",
+          ok: true,
+        });
+        setTimeout(() => {
+          setIsSignUp(false);
+          setMessage(null);
+        }, 3000);
       }
-
-      // 3. SUCCESS: But they are NOT logged in yet if email confirmation is on.
-      setMessage({ 
-        text: "✓ Account created! Please check your email to confirm your account before logging in.", 
-        ok: true 
+    } else {
+      // ─── SIGN IN FLOW ───
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      
-      // Do NOT redirect to /onboarding yet. Let them check their email.
-      setLoading(false);
-      return;
-    }
 
-    // 4. Handle any other errors (e.g., weak password, network error)
-    setMessage({ text: signInError?.message || "An error occurred", ok: false });
-    setLoading(false);
+      if (error) {
+        setMessage({ text: "Invalid email or password. Please try again.", ok: false });
+        setLoading(false);
+      } else {
+        router.push("/dashboard");
+      }
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -117,7 +117,7 @@ export default function LandingPage() {
     setLoading(true);
     setMessage(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: "https://workplace-app-puce.vercel.app/reset-password",
     });
     if (error) {
       setMessage({ text: error.message, ok: false });
@@ -130,16 +130,10 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen bg-[#030014] text-white flex flex-col overflow-hidden font-sans selection:bg-violet-500/30">
-
       {/* ─── BACKGROUND EFFECTS ─── */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Subtle Grid Pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-
-        {/* Top vignette — pulls the eye to the hero */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[520px] bg-[radial-gradient(ellipse_50%_50%_at_50%_0%,rgba(139,92,246,0.14),transparent_70%)]" />
-
-        {/* LightRays Effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[600px] opacity-30">
           <LightRays
             raysOrigin="top-center-offset"
@@ -156,8 +150,6 @@ export default function LandingPage() {
             saturation={1}
           />
         </div>
-
-        {/* Film-grain noise overlay — prevents banding, adds tactile depth */}
         <div
           className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
           style={{ backgroundImage: `url(${NOISE_BG})`, backgroundSize: "200px 200px" }}
@@ -183,7 +175,6 @@ export default function LandingPage() {
 
       {/* ─── MAIN CONTENT ─── */}
       <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 pb-20">
-
         <AnimatePresence mode="wait">
           {view === "auth" && (
             <motion.div
@@ -194,7 +185,6 @@ export default function LandingPage() {
               exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
               className="w-full max-w-lg space-y-10 text-center"
             >
-
               {/* Hero Text */}
               <motion.div variants={itemVariants} className="space-y-4">
                 <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1]">
@@ -219,10 +209,7 @@ export default function LandingPage() {
               >
                 <div className="space-y-3">
                   <div className="relative">
-                    <Mail
-                      size={16}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-                    />
+                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                     <input
                       type="email"
                       value={email}
@@ -233,10 +220,7 @@ export default function LandingPage() {
                     />
                   </div>
                   <div className="relative">
-                    <Lock
-                      size={16}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-                    />
+                    <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                     <input
                       type="password"
                       value={password}
@@ -255,9 +239,7 @@ export default function LandingPage() {
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className={`text-xs text-center mt-2 ${
-                        message.ok ? "text-emerald-400" : "text-red-400"
-                      }`}
+                      className={`text-xs text-center mt-2 ${message.ok ? "text-emerald-400" : "text-red-400"}`}
                     >
                       {message.text}
                     </motion.p>
@@ -273,17 +255,15 @@ export default function LandingPage() {
                     <Loader2 size={16} className="animate-spin" />
                   ) : (
                     <>
-                      Enter Nexus
+                      {isSignUp ? "Create Account" : "Enter Nexus"}
                       <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                     </>
                   )}
                 </button>
               </motion.form>
 
-              <motion.div
-                variants={itemVariants}
-                className="flex items-center justify-between text-xs text-zinc-500 max-w-sm mx-auto pt-2"
-              >
+              {/* Toggle between Sign In and Sign Up */}
+              <motion.div variants={itemVariants} className="flex flex-col items-center gap-2 text-xs text-zinc-500 max-w-sm mx-auto pt-2">
                 <button
                   type="button"
                   onClick={() => { setView("forgot"); setMessage(null); }}
@@ -291,14 +271,26 @@ export default function LandingPage() {
                 >
                   Forgot password?
                 </button>
-                <span className="text-zinc-600">New here? Auto-signup enabled.</span>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="text-zinc-500">
+                    {isSignUp ? "Already have an account?" : "New to Nexus?"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { 
+                      setIsSignUp(!isSignUp); 
+                      setMessage(null); 
+                      setPassword(""); // Clear password when switching modes
+                    }}
+                    className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
+                  >
+                    {isSignUp ? "Sign in" : "Sign up"}
+                  </button>
+                </div>
               </motion.div>
 
               {/* Feature Pills */}
-              <motion.div
-                variants={itemVariants}
-                className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-8 max-w-md mx-auto"
-              >
+              <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-8 max-w-md mx-auto">
                 {FEATURES.map(({ icon: Icon, label, color }) => (
                   <div
                     key={label}
@@ -328,10 +320,7 @@ export default function LandingPage() {
               <p className="text-sm text-zinc-400">Enter your email to receive a reset link.</p>
               <form onSubmit={handleForgotPassword} className="space-y-3">
                 <div className="relative">
-                  <Mail
-                    size={16}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-                  />
+                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                   <input
                     type="email"
                     value={email}
