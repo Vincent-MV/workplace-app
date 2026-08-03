@@ -1,386 +1,72 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckSquare,
-  Calendar,
-  Flame,
-  BookOpen,
-  Brain,
-  Sparkles,
-  ArrowRight,
-  Mail,
-  Lock,
-  Loader2,
-} from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import LightRays from "@/components/LightRays";
-
-const FEATURES = [
-  { icon: CheckSquare, label: "Tasks & Priorities", color: "text-indigo-400" },
-  { icon: Calendar, label: "Meetings & Schedule", color: "text-amber-400" },
-  { icon: Flame, label: "Habit Streaks", color: "text-orange-400" },
-  { icon: BookOpen, label: "Lesson Library", color: "text-emerald-400" },
-  { icon: Brain, label: "AI Assistant", color: "text-purple-400" },
-  { icon: Sparkles, label: "Multi-Workspace", color: "text-cyan-400" },
-];
-
-const NOISE_BG =
-  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==";
-
-type View = "auth" | "forgot" | "forgot-sent";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.09, delayChildren: 0.05 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16, scale: 0.985 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const },
-  },
-};
+  BackgroundEffects,
+  Navbar,
+  Hero,
+  LoginForm,
+  FeaturesGrid,
+  Footer,
+} from "@/components/landing";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [view, setView] = useState<View>("auth");
-  const [isSignUp, setIsSignUp] = useState(false); // 👈 NEW: Toggle between Sign In and Sign Up
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
-
-    const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
-
-    // 🧹 CRITICAL: Clear any existing session first! 
-    // This prevents the "seeing the wrong user's workplace" bug.
-    await supabase.auth.signOut();
-
-    if (isSignUp) {
-      // ─── SIGN UP FLOW ───
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: "https://workplace-app-puce.vercel.app/auth/callback",
-        },
-      });
-
-      if (error) {
-        setMessage({ text: error.message, ok: false });
-        setLoading(false);
-      } else if (data.session) {
-        // ✅ Email confirmation is OFF: User is logged in immediately!
-        setMessage({ text: "✓ Account created! Redirecting to onboarding...", ok: true });
-        setTimeout(() => router.push("/onboarding"), 1000);
-      } else {
-        // ⏳ Email confirmation is ON: User needs to check email
-        setMessage({
-          text: "✓ Account created! Please check your email to confirm your account, then log in.",
-          ok: true,
-        });
-        setTimeout(() => {
-          setIsSignUp(false);
-          setMessage(null);
-        }, 3000);
-      }
-    } else {
-      // ─── SIGN IN FLOW ───
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setMessage({ text: "Invalid email or password. Please try again.", ok: false });
-        setLoading(false);
-      } else {
-        router.push("/dashboard");
-      }
-    }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://workplace-app-puce.vercel.app/reset-password",
-    });
-    if (error) {
-      setMessage({ text: error.message, ok: false });
-      setLoading(false);
-      return;
-    }
-    setView("forgot-sent");
-    setLoading(false);
+  const handleAuthSuccess = () => {
+    // Optional: Any cleanup or analytics
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030014] text-white flex flex-col overflow-hidden font-sans selection:bg-violet-500/30">
-      {/* ─── BACKGROUND EFFECTS ─── */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[520px] bg-[radial-gradient(ellipse_50%_50%_at_50%_0%,rgba(139,92,246,0.14),transparent_70%)]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[600px] opacity-30">
-          <LightRays
-            raysOrigin="top-center-offset"
-            raysColor="#fdfdfd"
-            raysSpeed={0.5}
-            lightSpread={0.9}
-            rayLength={1.4}
-            followMouse={true}
-            mouseInfluence={0.1}
-            noiseAmount={0}
-            distortion={0}
-            pulsating={false}
-            fadeDistance={1}
-            saturation={1}
-          />
-        </div>
-        <div
-          className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
-          style={{ backgroundImage: `url(${NOISE_BG})`, backgroundSize: "200px 200px" }}
-        />
-      </div>
+    // REMOVED: flex flex-col, min-h-screen, overflow-hidden
+    // ADDED: Standard block layout that allows natural scrolling
+    <div className="relative bg-[#030014] text-white font-sans selection:bg-violet-500/30">
+      <BackgroundEffects />
+      
+      <div className="relative z-10">
+        <Navbar />
+        
+        <main>
+          {/* Hero & Auth Section */}
+          <section id="auth" className="scroll-mt-24 px-6 py-20 md:py-32 md:px-10 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <Hero />
+              <LoginForm onAuthSuccess={handleAuthSuccess} />
+            </div>
+          </section>
 
-      {/* ─── TOP NAVBAR ─── */}
-      <nav className="relative z-20 flex items-center justify-between px-6 py-5 md:px-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <span className="text-white font-bold text-lg tracking-tighter">N</span>
-          </div>
-          <span className="text-lg font-semibold text-white/90 tracking-tight">Nexus</span>
-        </div>
-        <div className="hidden md:flex items-center gap-6 text-sm text-zinc-400">
-          <span className="hover:text-white transition-colors cursor-pointer">Features</span>
-          <span className="hover:text-white transition-colors cursor-pointer">About</span>
-          <div className="px-3 py-1 rounded-full bg-white/[0.03] ring-1 ring-white/10 backdrop-blur-xl text-xs text-zinc-300">
-            v1.0 Beta
-          </div>
-        </div>
-      </nav>
-
-      {/* ─── MAIN CONTENT ─── */}
-      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 pb-20">
-        <AnimatePresence mode="wait">
-          {view === "auth" && (
-            <motion.div
-              key="auth"
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
-              className="w-full max-w-lg space-y-10 text-center"
-            >
-              {/* Hero Text */}
-              <motion.div variants={itemVariants} className="space-y-4">
-                <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1]">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/40">
-                    Your second brain.
-                  </span>
-                  <br />
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400">
-                    Unified.
-                  </span>
-                </h1>
-                <p className="text-lg text-zinc-400 font-light max-w-md mx-auto leading-relaxed tracking-tight">
-                  One place for school, ministry, habits, notes, and everything in between.
-                </p>
-              </motion.div>
-
-              {/* Auth Form */}
-              <motion.form
-                variants={itemVariants}
-                onSubmit={handleAuth}
-                className="space-y-3 text-left max-w-sm mx-auto"
-              >
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Email address"
-                      required
-                      className="w-full pl-11 pr-4 py-3.5 bg-white/[0.03] ring-1 ring-white/10 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/40 transition-all backdrop-blur-xl text-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
-                      required
-                      minLength={6}
-                      className="w-full pl-11 pr-4 py-3.5 bg-white/[0.03] ring-1 ring-white/10 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/40 transition-all backdrop-blur-xl text-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-                    />
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {message && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className={`text-xs text-center mt-2 ${message.ok ? "text-emerald-400" : "text-red-400"}`}
-                    >
-                      {message.text}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 bg-white text-black font-semibold rounded-xl transition-all duration-300 text-sm hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2 group shadow-[0_0_0_0_rgba(139,92,246,0)] hover:shadow-[0_8px_30px_-4px_rgba(139,92,246,0.45)]"
-                >
-                  {loading ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <>
-                      {isSignUp ? "Create Account" : "Enter Nexus"}
-                      <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                    </>
-                  )}
-                </button>
-              </motion.form>
-
-              {/* Toggle between Sign In and Sign Up */}
-              <motion.div variants={itemVariants} className="flex flex-col items-center gap-2 text-xs text-zinc-500 max-w-sm mx-auto pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setView("forgot"); setMessage(null); }}
-                  className="hover:text-white transition-colors"
-                >
-                  Forgot password?
-                </button>
-                <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-zinc-500">
-                    {isSignUp ? "Already have an account?" : "New to Nexus?"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => { 
-                      setIsSignUp(!isSignUp); 
-                      setMessage(null); 
-                      setPassword(""); // Clear password when switching modes
-                    }}
-                    className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
-                  >
-                    {isSignUp ? "Sign in" : "Sign up"}
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Feature Pills */}
-              <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-8 max-w-md mx-auto">
-                {FEATURES.map(({ icon: Icon, label, color }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.03] ring-1 ring-white/10 backdrop-blur-xl hover:bg-white/[0.06] hover:ring-white/20 transition-all duration-300 group shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-                  >
-                    <Icon size={15} className={`${color} group-hover:scale-110 transition-transform`} />
-                    <span className="text-xs text-zinc-400 font-medium group-hover:text-zinc-100 transition-colors tracking-tight">
-                      {label}
-                    </span>
-                  </div>
-                ))}
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* ── VIEW: FORGOT PASSWORD ── */}
-          {view === "forgot" && (
-            <motion.div
-              key="forgot"
-              initial={{ opacity: 0, y: 12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full max-w-sm space-y-6 text-center"
-            >
-              <h2 className="text-2xl font-bold text-white tracking-tight">Reset password</h2>
-              <p className="text-sm text-zinc-400">Enter your email to receive a reset link.</p>
-              <form onSubmit={handleForgotPassword} className="space-y-3">
-                <div className="relative">
-                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email address"
-                    required
-                    className="w-full pl-11 pr-4 py-3.5 bg-white/[0.03] ring-1 ring-white/10 rounded-xl text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/40 transition-all backdrop-blur-xl text-sm"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 bg-white text-black font-semibold rounded-xl transition-all text-sm hover:bg-white/90 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : "Send reset link"}
-                </button>
-              </form>
-              <button
-                type="button"
-                onClick={() => { setView("auth"); setMessage(null); }}
-                className="text-xs text-zinc-500 hover:text-white transition-colors"
-              >
-                ← Back to login
-              </button>
-            </motion.div>
-          )}
-
-          {/* ── VIEW: RESET SENT ── */}
-          {view === "forgot-sent" && (
-            <motion.div
-              key="forgot-sent"
-              initial={{ opacity: 0, y: 12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="text-center max-w-sm space-y-4"
-            >
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center mx-auto">
-                <span className="text-xl">✉️</span>
-              </div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Check your email</h2>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                If an account exists for <span className="text-white font-medium">{email}</span>, you will receive a reset link shortly.
+          {/* Features Section */}
+          <section id="features" className="scroll-mt-24 px-6 py-20 md:py-32 md:px-10 max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                Everything you need, in one place
+              </h2>
+              <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+                Nexus brings your tools, tasks, and thoughts together.
               </p>
-              <button
-                onClick={() => { setView("auth"); setEmail(""); setMessage(null); }}
-                className="text-xs text-zinc-500 hover:text-white transition-colors mt-4"
-              >
-                ← Back to login
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            </div>
+            <FeaturesGrid />
+          </section>
 
-      {/* Footer */}
-      <div className="relative text-center pb-8 z-10">
-        <p className="text-[10px] text-zinc-600 uppercase tracking-widest">
-          Built for student life × ministry leadership
-        </p>
+          {/* Resources / CTA Section */}
+          <section id="resources" className="scroll-mt-24 px-6 py-20 md:py-32 md:px-10 max-w-7xl mx-auto">
+            <div className="p-8 md:p-12 rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-violet-500/20 backdrop-blur-xl text-center">
+              <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                Ready to get started?
+              </h3>
+              <p className="text-zinc-400 mb-8 max-w-xl mx-auto">
+                Join thousands of students and professionals who use Nexus to stay organized.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-all hover:scale-105 shadow-lg shadow-violet-500/25">
+                  Create Free Account
+                </button>
+                <button className="px-6 py-3 bg-white/[0.03] hover:bg-white/[0.06] ring-1 ring-white/10 text-white font-medium rounded-lg transition-all">
+                  Learn More
+                </button>
+              </div>
+            </div>
+          </section>
+        </main>
+        
+        <Footer />
       </div>
     </div>
   );
