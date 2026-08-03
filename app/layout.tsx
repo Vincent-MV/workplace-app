@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Nexus — Personal Command Center",
-  description: "Unify School and Ministry life in one productivity hub",
+  title: "Nexus | Your Second Brain Unified",
+  description: "An AI-powered productivity workspace for school, ministry, habits, and notes. Built with Next.js and Supabase.",
 };
 
 export default function RootLayout({
