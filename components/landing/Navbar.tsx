@@ -32,7 +32,7 @@ export default function Navbar() {
       </motion.div>
 
       <motion.div 
-        className="hidden lg:flex items-center gap-8 text-sm"
+        className="hidden md:flex items-center gap-8 text-sm"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
