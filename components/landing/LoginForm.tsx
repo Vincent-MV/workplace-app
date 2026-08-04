@@ -92,6 +92,7 @@ export default function LoginForm({ onAuthSuccess }: LoginFormProps) {
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input
                 type="email"
+                aria-label="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
