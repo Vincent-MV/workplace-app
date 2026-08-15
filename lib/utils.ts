@@ -47,8 +47,17 @@ export function formatDateTime(dateString: string): string {
 export function daysAgo(dateString: string): number {
   const date = new Date(dateString);
   const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+  // 1. Strip the time by setting both to midnight
+  date.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  // 2. Calculate the difference in days
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  // 3. Use Math.round instead of Math.ceil to handle tiny fractions correctly
+  return Math.round(diffDays);
 }
 
 export const COLOR_PALETTE: string[] = [
