@@ -1,4 +1,3 @@
-// app/api/briefing/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
@@ -7,7 +6,12 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Authenticate User (Same pattern as your AI chat)
+    // 🛡️ TROUBLESHOOTING FIX 1: Fail fast if key is missing
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'Missing GROQ_API_KEY in .env.local' }, { status: 500 });
+    }
+
+    // 1. Authenticate User
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,15 +28,14 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Invalid user' }, { status: 401 });
 
     // 2. Fetch Today's Context
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
-    // Get today's tasks and upcoming meetings
     const { data: tasks } = await supabase.from('tasks')
       .select('title, due_date, status')
       .eq('user_id', user.id)
       .in('status', ['todo', 'in_progress'])
-      .lte('due_date', today) // Tasks due today or overdue
+      .lte('due_date', today)
       .limit(5);
 
     const { data: meetings } = await supabase.from('meetings')
@@ -42,7 +45,7 @@ export async function GET(req: NextRequest) {
       .order('scheduled_at')
       .limit(3);
 
-    // 3. Call Groq for a Summary
+    // 3. Call Groq for a Summary (YOUR EXCELLENT PROMPT)
     const prompt = `
       You are a strict but encouraging productivity assistant. Give me a short, actionable morning briefing based on this data.
       
@@ -58,7 +61,7 @@ export async function GET(req: NextRequest) {
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-       model: 'llama3-70b-8192',
+      model: 'llama-3.1-8b-instant',
       temperature: 0.5,
       max_tokens: 200,
     });
@@ -66,7 +69,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ briefing: completion.choices[0].message.content });
 
   } catch (error: any) {
-    // 🛡️ LAYER 2 DEFENSE: Catch Rate Limits specifically
+    // 🛡️ TROUBLESHOOTING FIX 2: Log the exact message, not the giant object
+    console.error('Briefing API Error:', error.message); 
+    
     if (error.status === 429 || error.code === 'rate_limit_exceeded') {
       return NextResponse.json({ 
         error: 'rate_limit', 
@@ -74,7 +79,7 @@ export async function GET(req: NextRequest) {
       }, { status: 429 });
     }
 
-    console.error('Briefing API Error:', error);
-    return NextResponse.json({ error: 'Failed to generate briefing' }, { status: 500 });
+    // 🛡️ TROUBLESHOOTING FIX 3: Send the message to the browser
+    return NextResponse.json({ error: error.message || 'Failed to generate briefing' }, { status: 500 });
   }
 }
