@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// 1. Initialize OpenRouter (uses the OpenAI SDK format)
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 export async function GET(req: NextRequest) {
   try {
-    // 🛡️ TROUBLESHOOTING FIX 1: Fail fast if key is missing
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json({ error: 'Missing GROQ_API_KEY in .env.local' }, { status: 500 });
-    }
+    // 🛡️ FIX 1: Check for the OPENROUTER key, not Groq!
+    if (!process.env.OPENROUTER_API_KEY) {
+  return NextResponse.json({ error: 'Missing OPENROUTER_API_KEY in .env.local' }, { status: 500 });
+  }
 
-    // 1. Authenticate User
+  // ADD THIS TEMPORARY LINE TO TEST:
+  console.log("API Key Status:", process.env.OPENROUTER_API_KEY ? "FOUND (Length: " + process.env.OPENROUTER_API_KEY.length + ")" : "NOT FOUND");
+
+    // 2. Authenticate User
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,7 +34,7 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Invalid user' }, { status: 401 });
 
-    // 2. Fetch Today's Context
+    // 3. Fetch Today's Context
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
@@ -45,7 +52,7 @@ export async function GET(req: NextRequest) {
       .order('scheduled_at')
       .limit(3);
 
-    // 3. Call Groq for a Summary (YOUR EXCELLENT PROMPT)
+    // 4. Call OpenRouter for a Summary (YOUR EXCELLENT PROMPT)
     const prompt = `
       You are a strict but encouraging productivity assistant. Give me a short, actionable morning briefing based on this data.
       
@@ -59,9 +66,10 @@ export async function GET(req: NextRequest) {
       Meetings: ${JSON.stringify(meetings || [])}
     `;
 
-    const completion = await groq.chat.completions.create({
+    // 🛡️ FIX 2: Use the most stable, currently active free model
+    const completion = await openai.chat.completions.create({
+      model: "mistralai/mistral-7b-instruct:free",
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama-3.1-8b-instant',
       temperature: 0.5,
       max_tokens: 200,
     });
@@ -69,7 +77,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ briefing: completion.choices[0].message.content });
 
   } catch (error: any) {
-    // 🛡️ TROUBLESHOOTING FIX 2: Log the exact message, not the giant object
+    // 🛡️ FIX 3: Log the exact message
     console.error('Briefing API Error:', error.message); 
     
     if (error.status === 429 || error.code === 'rate_limit_exceeded') {
@@ -79,7 +87,6 @@ export async function GET(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // 🛡️ TROUBLESHOOTING FIX 3: Send the message to the browser
     return NextResponse.json({ error: error.message || 'Failed to generate briefing' }, { status: 500 });
   }
 }
