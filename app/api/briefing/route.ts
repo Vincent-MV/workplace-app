@@ -2,23 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
-// 1. Initialize OpenRouter (uses the OpenAI SDK format)
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
 export async function GET(req: NextRequest) {
   try {
-    // 🛡️ FIX 1: Check for the OPENROUTER key, not Groq!
+    //  Check for the key FIRST
     if (!process.env.OPENROUTER_API_KEY) {
-  return NextResponse.json({ error: 'Missing OPENROUTER_API_KEY in .env.local' }, { status: 500 });
-  }
+      return NextResponse.json({ error: 'Missing OPENROUTER_API_KEY in environment variables' }, { status: 500 });
+    }
 
-  // ADD THIS TEMPORARY LINE TO TEST:
-  console.log("API Key Status:", process.env.OPENROUTER_API_KEY ? "FOUND (Length: " + process.env.OPENROUTER_API_KEY.length + ")" : "NOT FOUND");
+    //  Initialize INSIDE the function to prevent build-time crashes
+    const openai = new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+    });
 
-    // 2. Authenticate User
+    // 3. Authenticate User
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,7 +31,7 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Invalid user' }, { status: 401 });
 
-    // 3. Fetch Today's Context
+    // 4. Fetch Today's Context
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
@@ -52,7 +49,7 @@ export async function GET(req: NextRequest) {
       .order('scheduled_at')
       .limit(3);
 
-    // 4. Call OpenRouter for a Summary (YOUR EXCELLENT PROMPT)
+    // 5. Call OpenRouter for a Summary
     const prompt = `
       You are a strict but encouraging productivity assistant. Give me a short, actionable morning briefing based on this data.
       
@@ -66,9 +63,8 @@ export async function GET(req: NextRequest) {
       Meetings: ${JSON.stringify(meetings || [])}
     `;
 
-    // 🛡️ FIX 2: Use the most stable, currently active free model
     const completion = await openai.chat.completions.create({
-      model: "mistralai/mistral-7b-instruct:free",
+      model: "meta-llama/llama-3-8b-instruct:free", 
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
       max_tokens: 200,
@@ -77,10 +73,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ briefing: completion.choices[0].message.content });
 
   } catch (error: any) {
-    // 🛡️ FIX 3: Log the exact message
     console.error('Briefing API Error:', error.message); 
     
-    if (error.status === 429 || error.code === 'rate_limit_exceeded') {
+    if (error.status === 429 || error.code === 'rate_limit_exceeded' || error.message?.includes('429')) {
       return NextResponse.json({ 
         error: 'rate_limit', 
         message: "AI is taking a quick break. Please try again in a few minutes." 
