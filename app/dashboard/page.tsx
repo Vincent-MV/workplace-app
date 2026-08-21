@@ -46,14 +46,20 @@ export default function DashboardPage() {
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
             Upcoming Meetings
           </h2>
-          <UpcomingMeetings refreshKey={refreshKey} />
+          <UpcomingMeetings 
+            refreshKey={refreshKey} 
+            onChanged={() => setRefreshKey((k) => k + 1)}
+            />
         </section>
 
         <section>
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
             Habits — Today
           </h2>
-          <HabitsToday refreshKey={refreshKey} />
+          <HabitsToday 
+            refreshKey={refreshKey}
+            onChanged={() => setRefreshKey((k) => k + 1)}
+            />
         </section>
       </div>
     </AppShell>

@@ -5,8 +5,9 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Habit, HabitLog } from "@/lib/types";
 import { todayISO } from "@/lib/utils";
-import { Flame, Square, CheckSquare } from "lucide-react";
+import { Flame, Square, CheckSquare, Plus } from "lucide-react"; // Added Plus
 import { MOCK_HABITS, MOCK_HABIT_LOGS } from "@/lib/mock-data";
+import AddHabitModal from "@/components/modals/AddHabitModal"; // ✅ Import the new modal
 
 interface HabitWithLog extends Habit {
   todayLog?: HabitLog;
@@ -15,14 +16,18 @@ interface HabitWithLog extends Habit {
 
 interface Props {
   refreshKey: number;
+  onChanged?: () => void; // ✅ Added to match other widgets
 }
 
-export default function HabitsToday({ refreshKey }: Props) {
-  const { workspaces, isDemo } = useWorkspace();
+export default function HabitsToday({ refreshKey, onChanged }: Props) {
+  const { workspaces, isDemo, activeWorkspace } = useWorkspace();
   const [habits, setHabits] = useState<HabitWithLog[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // ✅ NEW: State to control the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const userId = workspaces[0]?.user_id;
+  const userId = activeWorkspace?.user_id ?? workspaces[0]?.user_id;
 
   const fetchHabits = async () => {
     if (isDemo) {
@@ -76,6 +81,7 @@ export default function HabitsToday({ refreshKey }: Props) {
           h.id === habit.id ? { ...h, todayCompleted: newCompleted } : h
         )
       );
+      onChanged?.();
       return;
     }
 
@@ -99,6 +105,7 @@ export default function HabitsToday({ refreshKey }: Props) {
     }
 
     fetchHabits();
+    onChanged?.();
   };
 
   if (loading) {
@@ -111,11 +118,38 @@ export default function HabitsToday({ refreshKey }: Props) {
     );
   }
 
+  // ✅ NEW: Rich, action-oriented, instantly understandable Empty State
   if (!habits.length) {
     return (
-      <div className="text-center py-8 text-slate-400">
-        <Flame size={32} className="mx-auto mb-2 opacity-30" />
-        <p className="text-sm">No habits tracked yet</p>
+      <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200">
+        <div className="p-3 rounded-full bg-amber-100 text-amber-600 mb-3">
+          <Flame size={28} />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-800 mb-1">
+          Start building your habits
+        </h3>
+        <p className="text-xs text-slate-500 max-w-[260px] mb-5 leading-relaxed">
+          Small, consistent actions create big results. Add your first daily habit to start tracking your progress and building your streak.
+        </p>
+        
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-amber-500/20 hover:shadow-md hover:shadow-amber-500/30"
+        >
+          <Plus size={16} />
+          Add your first habit
+        </button>
+
+        {/* ✅ Render the modal right here when open */}
+        {isModalOpen && (
+          <AddHabitModal
+            onClose={() => setIsModalOpen(false)}
+            onSaved={() => {
+              setIsModalOpen(false);
+              onChanged?.(); // Triggers parent to refresh the list!
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -143,7 +177,7 @@ export default function HabitsToday({ refreshKey }: Props) {
           </button>
           <div className="flex-1 min-w-0">
             <p
-              className={`text-sm font-medium ${
+              className={`text-sm font-medium truncate ${
                 habit.todayCompleted ? "line-through text-slate-400" : "text-slate-800"
               }`}
             >
@@ -153,12 +187,31 @@ export default function HabitsToday({ refreshKey }: Props) {
               <p className="text-xs text-slate-400 truncate">{habit.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-1 text-orange-500 flex-shrink-0">
-            <Flame size={13} />
+          <div className="flex items-center gap-1 text-amber-500 flex-shrink-0">
+            <Flame size={13} className={habit.todayCompleted ? "opacity-50" : ""} />
             <span className="text-xs font-semibold">{habit.streak_count}</span>
           </div>
         </div>
       ))}
+      
+      {/* ✅ Bonus: Subtle "Add" button visible even when habits exist */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="w-full py-2.5 mt-2 rounded-xl border border-dashed border-slate-200 text-slate-500 hover:text-amber-600 hover:border-amber-300 hover:bg-amber-50/50 transition-all text-sm flex items-center justify-center gap-2 font-medium"
+      >
+        <Plus size={16} /> Add another habit
+      </button>
+
+      {/* ✅ Render the modal here too */}
+      {isModalOpen && (
+        <AddHabitModal
+          onClose={() => setIsModalOpen(false)}
+          onSaved={() => {
+            setIsModalOpen(false);
+            onChanged?.();
+          }}
+        />
+      )}
     </div>
   );
 }

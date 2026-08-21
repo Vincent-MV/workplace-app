@@ -5,8 +5,9 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task } from "@/lib/types";
 import { todayISO, cn } from "@/lib/utils";
-import { CheckSquare, Square } from "lucide-react";
+import { CheckSquare, Square, Plus } from "lucide-react"; // Added Plus icon
 import { MOCK_TASKS } from "@/lib/mock-data";
+import AddTaskModal from "@/components/modals/AddTaskModal"; // ✅ Import your modal
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: "#ef4444",
@@ -23,6 +24,9 @@ export default function TodayPriorities({ refreshKey, onChanged }: Props) {
   const { activeWorkspace, workspaces, isDemo } = useWorkspace();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // ✅ NEW: State to control the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (!activeWorkspace) return;
@@ -77,11 +81,38 @@ export default function TodayPriorities({ refreshKey, onChanged }: Props) {
     );
   }
 
+  // ✅ NEW: Rich, action-oriented Empty State
   if (!tasks.length) {
     return (
-      <div className="text-center py-8 text-slate-400">
-        <CheckSquare size={32} className="mx-auto mb-2 opacity-30" />
-        <p className="text-sm">No tasks due today</p>
+      <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200">
+        <div className="p-3 rounded-full bg-violet-100 text-violet-600 mb-3">
+          <CheckSquare size={28} />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-800 mb-1">
+          No tasks due today
+        </h3>
+        <p className="text-xs text-slate-500 max-w-[260px] mb-5">
+          You're all caught up! Add a new priority to keep your day focused and productive.
+        </p>
+        
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-violet-500/20 hover:shadow-md hover:shadow-violet-500/30"
+        >
+          <Plus size={16} />
+          Add your first task
+        </button>
+
+        {/* ✅ Render the modal right here when open */}
+        {isModalOpen && (
+          <AddTaskModal
+            onClose={() => setIsModalOpen(false)}
+            onSaved={() => {
+              setIsModalOpen(false);
+              onChanged(); // Triggers the useEffect to refetch the new task!
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -155,6 +186,25 @@ export default function TodayPriorities({ refreshKey, onChanged }: Props) {
           </div>
         );
       })}
+      
+      {/* ✅ Bonus: Keep a subtle "Add" button visible even when tasks exist */}
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="w-full py-2.5 mt-2 rounded-xl border border-dashed border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300 hover:bg-violet-50/50 transition-all text-sm flex items-center justify-center gap-2 font-medium"
+      >
+        <Plus size={16} /> Add another task
+      </button>
+
+      {/* ✅ Render the modal here too, so users can add tasks from the list view */}
+      {isModalOpen && (
+        <AddTaskModal
+          onClose={() => setIsModalOpen(false)}
+          onSaved={() => {
+            setIsModalOpen(false);
+            onChanged();
+          }}
+        />
+      )}
     </div>
   );
 }
