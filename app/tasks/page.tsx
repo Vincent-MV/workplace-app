@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import AppShell from "@/components/layout/AppShell";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task } from "@/lib/types";
 import { todayISO, formatDate, daysAgo, cn } from "@/lib/utils";
-import { CheckSquare, Square, Calendar, CheckCircle, Clock, Trash2 } from "lucide-react";
+import { 
+  CheckSquare, Square, Calendar, CheckCircle, Clock, Trash2, 
+  Coffee, Sun, CalendarClock, Sparkles 
+} from "lucide-react";
+import DeletionTaskModal from "@/components/modals/DeletionTaskModal";
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: "#ef4444",
@@ -21,6 +26,30 @@ const STATUS_LABELS: Record<string, string> = {
   missed: "Missed",
 };
 
+// ✅ NEW: Contextual Empty States based on the active filter
+const EMPTY_STATES = {
+  overdue: {
+    icon: <Coffee size={40} className="text-amber-500 opacity-80" />,
+    title: "Don't stress, it happens! 🧘",
+    desc: "Take a deep breath. Reschedule it or tackle just one small thing today. Progress over perfection.",
+  },
+  today: {
+    icon: <Sun size={40} className="text-violet-500 opacity-80" />,
+    title: "You've got this! 💪",
+    desc: "Focus on your top priorities. Take it one step at a time and celebrate the small wins.",
+  },
+  upcoming: {
+    icon: <CalendarClock size={40} className="text-blue-500 opacity-80" />,
+    title: "Looking ahead! 🗓️",
+    desc: "A little planning now saves a lot of stress later. Your future self will thank you.",
+  },
+  all: {
+    icon: <Sparkles size={40} className="text-green-500 opacity-80" />,
+    title: "All caught up! 🎉",
+    desc: "Enjoy the free time, or add a new task to keep your momentum going.",
+  },
+};
+
 export default function TasksPage() {
   const { activeWorkspace, workspaces } = useWorkspace();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -28,6 +57,9 @@ export default function TasksPage() {
   const [filter, setFilter] = useState<"all" | "overdue" | "today" | "upcoming">("all");
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
+  
+  // ✅ NEW: State for the delete modal
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
 
@@ -51,7 +83,7 @@ export default function TasksPage() {
     if (filter === "overdue") return t.due_date && t.due_date < today && !t.confirmed;
     if (filter === "today") return t.due_date === today;
     if (filter === "upcoming") return t.due_date && t.due_date > today;
-    return true;
+    return true; // "all"
   });
 
   const toggleTask = async (task: Task) => {
@@ -65,18 +97,23 @@ export default function TasksPage() {
     fetchTasks();
   };
 
-  // ✅ NEW: Delete Task Function
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
+  // ✅ NEW: Initiate delete via modal (no more browser confirm/alert)
+  const initiateDelete = (task: Task) => {
+    setTaskToDelete(task);
+  };
 
-    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
 
+    // Optimistic UI update
+    setTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+    setTaskToDelete(null);
+
+    const { error } = await supabase.from("tasks").delete().eq("id", taskToDelete.id);
     if (error) {
       console.error("Failed to delete task:", error);
-      alert("Could not delete task.");
-    } else {
-      // Instantly remove from UI
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      // Revert optimistic update on error
+      fetchTasks(); 
     }
   };
 
@@ -138,10 +175,23 @@ export default function TasksPage() {
             ))}
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            <CheckSquare size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No tasks found</p>
-          </div>
+          // ✅ NEW: Contextual, encouraging Empty State
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200"
+          >
+            <div className="mb-4">
+              {EMPTY_STATES[filter].icon}
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              {EMPTY_STATES[filter].title}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed">
+              {EMPTY_STATES[filter].desc}
+            </p>
+          </motion.div>
         ) : (
           <div className="space-y-2">
             {filteredTasks.map((task) => {
@@ -163,6 +213,7 @@ export default function TasksPage() {
                     <button
                       onClick={() => toggleTask(task)}
                       className="flex-shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      title={done ? "Mark as to-do" : "Mark as done"}
                     >
                       {done ? (
                         <CheckSquare size={17} className="text-green-500" />
@@ -202,12 +253,13 @@ export default function TasksPage() {
                       )}
                       <span
                         className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
+                        style={{ backgroundColor: PRIORITY_COLORS[task.priority] ?? "#94a3b8" }}
+                        title={`Priority: ${task.priority}`}
                       />
-                      {/* ✅ NEW: Delete Button */}
+                      {/* ✅ NEW: Delete Button with cursor-pointer */}
                       <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 ml-1"
+                        onClick={() => initiateDelete(task)}
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
                         title="Delete task"
                       >
                         <Trash2 size={14} />
@@ -224,18 +276,18 @@ export default function TasksPage() {
                             value={rescheduleDate}
                             min={today}
                             onChange={(e) => setRescheduleDate(e.target.value)}
-                            className="px-2 py-1 text-xs border border-slate-200 rounded-lg"
+                            className="px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
                           />
                           <button
                             onClick={() => handleReschedule(task)}
                             disabled={!rescheduleDate}
-                            className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg disabled:opacity-50"
+                            className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg disabled:opacity-50 hover:bg-amber-600 transition-colors"
                           >
                             Save
                           </button>
                           <button
                             onClick={() => { setReschedulingId(null); setRescheduleDate(""); }}
-                            className="text-xs text-slate-400 hover:underline"
+                            className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
                           >
                             Cancel
                           </button>
@@ -264,6 +316,15 @@ export default function TasksPage() {
           </div>
         )}
       </div>
+
+      {/* ✅ NEW: Delete Confirmation Modal */}
+      {taskToDelete && (
+        <DeletionTaskModal
+          taskTitle={taskToDelete.title} 
+          onClose={() => setTaskToDelete(null)} 
+          onConfirm={confirmDelete} 
+        />
+      )}
     </AppShell>
   );
 }
