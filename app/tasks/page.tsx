@@ -9,9 +9,10 @@ import type { Task } from "@/lib/types";
 import { todayISO, formatDate, daysAgo, cn } from "@/lib/utils";
 import { 
   CheckSquare, Square, Calendar, CheckCircle, Clock, Trash2, 
-  Coffee, Sun, CalendarClock, Sparkles 
+  Coffee, Sun, CalendarClock, Sparkles, Plus 
 } from "lucide-react";
 import DeletionTaskModal from "@/components/modals/DeletionTaskModal";
+import AddTaskModal from "@/components/modals/AddTaskModal";
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: "#ef4444",
@@ -26,27 +27,35 @@ const STATUS_LABELS: Record<string, string> = {
   missed: "Missed",
 };
 
-// ✅ NEW: Contextual Empty States based on the active filter
+// ✅ UPDATED: Contextual Empty States with action buttons
 const EMPTY_STATES = {
   overdue: {
-    icon: <Coffee size={40} className="text-amber-500 opacity-80" />,
+    icon: <Coffee size={40} className="text-amber-500" />,
+    iconBg: "bg-amber-100",
     title: "Don't stress, it happens! 🧘",
     desc: "Take a deep breath. Reschedule it or tackle just one small thing today. Progress over perfection.",
+    buttonText: "Reschedule a task",
   },
   today: {
-    icon: <Sun size={40} className="text-violet-500 opacity-80" />,
+    icon: <Sun size={40} className="text-violet-500" />,
+    iconBg: "bg-violet-100",
     title: "You've got this! 💪",
     desc: "Focus on your top priorities. Take it one step at a time and celebrate the small wins.",
+    buttonText: "Add a task for today",
   },
   upcoming: {
-    icon: <CalendarClock size={40} className="text-blue-500 opacity-80" />,
-    title: "Looking ahead! 🗓️",
+    icon: <CalendarClock size={40} className="text-blue-500" />,
+    iconBg: "bg-blue-100",
+    title: "Looking ahead! ️",
     desc: "A little planning now saves a lot of stress later. Your future self will thank you.",
+    buttonText: "Schedule a future task",
   },
   all: {
-    icon: <Sparkles size={40} className="text-green-500 opacity-80" />,
+    icon: <Sparkles size={40} className="text-green-500" />,
+    iconBg: "bg-green-100",
     title: "All caught up! 🎉",
     desc: "Enjoy the free time, or add a new task to keep your momentum going.",
+    buttonText: "Add your first task",
   },
 };
 
@@ -58,8 +67,9 @@ export default function TasksPage() {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
   
-  // ✅ NEW: State for the delete modal
+  // ✅ NEW: Modal states
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
 
@@ -97,7 +107,6 @@ export default function TasksPage() {
     fetchTasks();
   };
 
-  // ✅ NEW: Initiate delete via modal (no more browser confirm/alert)
   const initiateDelete = (task: Task) => {
     setTaskToDelete(task);
   };
@@ -105,14 +114,12 @@ export default function TasksPage() {
   const confirmDelete = async () => {
     if (!taskToDelete) return;
 
-    // Optimistic UI update
     setTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
     setTaskToDelete(null);
 
     const { error } = await supabase.from("tasks").delete().eq("id", taskToDelete.id);
     if (error) {
       console.error("Failed to delete task:", error);
-      // Revert optimistic update on error
       fetchTasks(); 
     }
   };
@@ -175,22 +182,29 @@ export default function TasksPage() {
             ))}
           </div>
         ) : filteredTasks.length === 0 ? (
-          // ✅ NEW: Contextual, encouraging Empty State
+          // ✅ UPDATED: Empty state with prominent action button (matching Dashboard style)
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200"
           >
-            <div className="mb-4">
+            <div className={cn("p-4 rounded-full mb-4", EMPTY_STATES[filter].iconBg)}>
               {EMPTY_STATES[filter].icon}
             </div>
             <h3 className="text-sm font-semibold text-slate-800 mb-1">
               {EMPTY_STATES[filter].title}
             </h3>
-            <p className="text-xs text-slate-500 max-w-[280px] leading-relaxed">
+            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
               {EMPTY_STATES[filter].desc}
             </p>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-violet-500/20 hover:shadow-md hover:shadow-violet-500/30 cursor-pointer"
+            >
+              <Plus size={16} />
+              {EMPTY_STATES[filter].buttonText}
+            </button>
           </motion.div>
         ) : (
           <div className="space-y-2">
@@ -241,7 +255,6 @@ export default function TasksPage() {
                       </div>
                     </div>
                     
-                    {/* Right side: Workspace Badge, Priority Dot, and Delete Button */}
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {ws && (
                         <span
@@ -256,7 +269,6 @@ export default function TasksPage() {
                         style={{ backgroundColor: PRIORITY_COLORS[task.priority] ?? "#94a3b8" }}
                         title={`Priority: ${task.priority}`}
                       />
-                      {/* ✅ NEW: Delete Button with cursor-pointer */}
                       <button
                         onClick={() => initiateDelete(task)}
                         className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
@@ -317,12 +329,22 @@ export default function TasksPage() {
         )}
       </div>
 
-      {/* ✅ NEW: Delete Confirmation Modal */}
+      {/* Modals */}
       {taskToDelete && (
         <DeletionTaskModal
           taskTitle={taskToDelete.title} 
           onClose={() => setTaskToDelete(null)} 
           onConfirm={confirmDelete} 
+        />
+      )}
+      
+      {isAddModalOpen && (
+        <AddTaskModal 
+          onClose={() => setIsAddModalOpen(false)} 
+          onSaved={() => { 
+            setIsAddModalOpen(false); 
+            fetchTasks(); 
+          }} 
         />
       )}
     </AppShell>
