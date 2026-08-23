@@ -1,21 +1,45 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { motion } from "framer-motion";
 import AppShell from "@/components/layout/AppShell";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Meeting } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
-import { Calendar, MapPin, Clock, Plus, X, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  Calendar, MapPin, Clock, Plus, X, Trash2, ChevronDown, ChevronUp, 
+  Coffee 
+} from "lucide-react";
+import DeletionTaskModal from "@/components/modals/DeletionTaskModal";
+
+//  Contextual Empty States
+const EMPTY_STATES = {
+  none: {
+    icon: <Calendar size={40} className="text-indigo-500" />,
+    iconBg: "bg-indigo-100",
+    title: "Calendar is clear! 🗓️",
+    desc: "Start scheduling meetings to collaborate with your team and stay aligned.",
+    buttonText: "Schedule your first meeting",
+  },
+  noUpcoming: {
+    icon: <Coffee size={40} className="text-amber-500" />,
+    iconBg: "bg-amber-100",
+    title: "All caught up for now! ☕",
+    desc: "You have no upcoming meetings. Take a breather or schedule something new to keep the momentum going.",
+    buttonText: "Schedule a new meeting",
+  }
+};
 
 export default function MeetingsPage() {
   const { activeWorkspace, workspaces } = useWorkspace();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  
-  // NEW: State to toggle advanced fields
   const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  //  State for the delete modal
+  const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
   
   const [form, setForm] = useState({
     title: "", agenda: "", scheduled_at: "", duration_mins: 60, location: "",
@@ -24,11 +48,9 @@ export default function MeetingsPage() {
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // NEW: Auto-resize the agenda textarea as the user types
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      // Cap the height at 120px, then let it scroll internally
       const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
       textareaRef.current.style.height = `${newHeight}px`;
     }
@@ -60,20 +82,26 @@ export default function MeetingsPage() {
     
     setForm({ title: "", agenda: "", scheduled_at: "", duration_mins: 60, location: "" });
     setShowForm(false);
-    setShowAdvanced(false); // Reset toggle
+    setShowAdvanced(false);
     fetchMeetings();
   };
 
-  const handleDeleteMeeting = async (meetingId: string) => {
-    if (!confirm("Are you sure you want to delete this meeting?")) return;
+  //  Professional delete flow (no more alert/confirm)
+  const initiateDelete = (meeting: Meeting) => {
+    setMeetingToDelete(meeting);
+  };
 
-    const { error } = await supabase.from('meetings').delete().eq('id', meetingId);
+  const confirmDelete = async () => {
+    if (!meetingToDelete) return;
 
+    // Optimistic UI update
+    setMeetings((prev) => prev.filter((m) => m.id !== meetingToDelete.id));
+    setMeetingToDelete(null);
+
+    const { error } = await supabase.from('meetings').delete().eq('id', meetingToDelete.id);
     if (error) {
       console.error("Failed to delete meeting:", error);
-      alert("Could not delete meeting. Check console for details.");
-    } else {
-      setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+      fetchMeetings(); // Revert on error
     }
   };
 
@@ -113,9 +141,10 @@ export default function MeetingsPage() {
                 {ws.name}
               </span>
             )}
+            {/* Added cursor-pointer */}
             <button
-              onClick={() => handleDeleteMeeting(m.id)}
-              className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
+              onClick={() => initiateDelete(m)}
+              className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
               title="Delete meeting"
             >
               <Trash2 size={14} />
@@ -134,17 +163,16 @@ export default function MeetingsPage() {
             <h1 className="text-xl font-bold text-slate-800">Meetings</h1>
             <p className="text-sm text-slate-500">{activeWorkspace?.name}</p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors"
-          >
-            <Plus size={15} />Schedule
-          </button>
+          
         </div>
 
-      
         {showForm && (
-          <form onSubmit={handleCreate} className="p-4 bg-white rounded-xl border border-slate-200 space-y-4 animate-slide-down">
+          <motion.form 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onSubmit={handleCreate} 
+            className="p-4 bg-white rounded-xl border border-slate-200 space-y-4"
+          >
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-700">New Meeting</h3>
@@ -157,12 +185,11 @@ export default function MeetingsPage() {
                   </p>
                 )}
               </div>
-              <button type="button" onClick={() => { setShowForm(false); setShowAdvanced(false); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button type="button" onClick={() => { setShowForm(false); setShowAdvanced(false); }} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
                 <X size={16} />
               </button>
             </div>
 
-            {/* 1. Essential Fields (Always Visible) */}
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Meeting title *</label>
               <input
@@ -200,19 +227,21 @@ export default function MeetingsPage() {
               </div>
             </div>
 
-            {/* 2. Progressive Disclosure Toggle */}
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors w-full justify-center py-1"
+              className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700 transition-colors w-full justify-center py-1 cursor-pointer"
             >
               {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               {showAdvanced ? "Less options" : "+ More options (Location & Agenda)"}
             </button>
 
-            {/* 3. Advanced Fields (Hidden by default) */}
             {showAdvanced && (
-              <div className="space-y-3 animate-slide-down pt-2 border-t border-slate-100">
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }} 
+                animate={{ height: "auto", opacity: 1 }}
+                className="space-y-3 pt-2 border-t border-slate-100 overflow-hidden"
+              >
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Location</label>
                   <input
@@ -234,13 +263,13 @@ export default function MeetingsPage() {
                     style={{ minHeight: "80px" }}
                   />
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            <button type="submit" className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold transition-colors">
+            <button type="submit" className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer">
               Schedule Meeting
             </button>
-          </form>
+          </motion.form>
         )}
 
         {loading ? (
@@ -249,27 +278,73 @@ export default function MeetingsPage() {
           </div>
         ) : (
           <>
+            {/*  Rich Empty States */}
+            {meetings.length === 0 && !showForm ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200"
+              >
+                <div className={`p-4 rounded-full mb-4 ${EMPTY_STATES.none.iconBg}`}>
+                  {EMPTY_STATES.none.icon}
+                </div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATES.none.title}</h3>
+                <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATES.none.desc}</p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-500/20 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
+                >
+                  <Plus size={16} />
+                  {EMPTY_STATES.none.buttonText}
+                </button>
+              </motion.div>
+            ) : upcoming.length === 0 && !showForm ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200 mb-6"
+              >
+                <div className={`p-4 rounded-full mb-4 ${EMPTY_STATES.noUpcoming.iconBg}`}>
+                  {EMPTY_STATES.noUpcoming.icon}
+                </div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATES.noUpcoming.title}</h3>
+                <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATES.noUpcoming.desc}</p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-amber-500/20 hover:shadow-md hover:shadow-amber-500/30 cursor-pointer"
+                >
+                  <Plus size={16} />
+                  {EMPTY_STATES.noUpcoming.buttonText}
+                </button>
+              </motion.div>
+            ) : null}
+
+            {/* Meetings Lists */}
             {upcoming.length > 0 && (
               <section>
                 <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Upcoming</h2>
                 <div className="space-y-2">{upcoming.map((m) => <MeetingCard key={m.id} m={m} />)}</div>
               </section>
             )}
+            
             {past.length > 0 && (
               <section>
                 <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Past</h2>
                 <div className="space-y-2 opacity-60">{past.map((m) => <MeetingCard key={m.id} m={m} />)}</div>
               </section>
             )}
-            {meetings.length === 0 && (
-              <div className="text-center py-12 text-slate-400">
-                <Calendar size={40} className="mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No meetings yet</p>
-              </div>
-            )}
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {meetingToDelete && (
+        <DeletionTaskModal
+          taskTitle={meetingToDelete.title} 
+          onClose={() => setMeetingToDelete(null)} 
+          onConfirm={confirmDelete} 
+        />
+      )}
     </AppShell>
   );
 }
