@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   missed: "Missed",
 };
 
-// ✅ UPDATED: Contextual Empty States with action buttons
+// ✅ Contextual Empty States with action buttons
 const EMPTY_STATES = {
   overdue: {
     icon: <Coffee size={40} className="text-amber-500" />,
@@ -46,7 +46,7 @@ const EMPTY_STATES = {
   upcoming: {
     icon: <CalendarClock size={40} className="text-blue-500" />,
     iconBg: "bg-blue-100",
-    title: "Looking ahead! ️",
+    title: "Looking ahead! 🗓️",
     desc: "A little planning now saves a lot of stress later. Your future self will thank you.",
     buttonText: "Schedule a future task",
   },
@@ -67,7 +67,7 @@ export default function TasksPage() {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
   
-  // ✅ NEW: Modal states
+  // Modal states
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -142,6 +142,7 @@ export default function TasksPage() {
   return (
     <AppShell>
       <div className="max-w-3xl mx-auto space-y-4">
+        {/* ✅ HEADER: Fixed button text and onClick handler */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Tasks</h1>
@@ -149,6 +150,12 @@ export default function TasksPage() {
               {activeWorkspace?.name ?? "All workspaces"}
             </p>
           </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors cursor-pointer shadow-sm shadow-violet-500/20"
+          >
+            <Plus size={15} /> New Task
+          </button>
         </div>
 
         {/* Filters */}
@@ -158,7 +165,7 @@ export default function TasksPage() {
               key={value}
               onClick={() => setFilter(value)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border cursor-pointer",
                 filter === value
                   ? "bg-slate-800 text-white border-slate-800"
                   : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
@@ -182,7 +189,7 @@ export default function TasksPage() {
             ))}
           </div>
         ) : filteredTasks.length === 0 ? (
-          // ✅ UPDATED: Empty state with prominent action button (matching Dashboard style)
+          // ✅ EMPTY STATE: Prominent, impossible-to-miss action button
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -226,7 +233,7 @@ export default function TasksPage() {
                   <div className="flex items-start gap-3">
                     <button
                       onClick={() => toggleTask(task)}
-                      className="flex-shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="flex-shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                       title={done ? "Mark as to-do" : "Mark as done"}
                     >
                       {done ? (
@@ -293,13 +300,13 @@ export default function TasksPage() {
                           <button
                             onClick={() => handleReschedule(task)}
                             disabled={!rescheduleDate}
-                            className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg disabled:opacity-50 hover:bg-amber-600 transition-colors"
+                            className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg disabled:opacity-50 hover:bg-amber-600 transition-colors cursor-pointer"
                           >
                             Save
                           </button>
                           <button
                             onClick={() => { setReschedulingId(null); setRescheduleDate(""); }}
-                            className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+                            className="text-xs text-slate-400 hover:text-slate-600 hover:underline cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -308,13 +315,13 @@ export default function TasksPage() {
                         <>
                           <button
                             onClick={() => setReschedulingId(task.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                           >
                             <Calendar size={11} /> Reschedule
                           </button>
                           <button
                             onClick={() => markDone(task)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
                           >
                             <CheckCircle size={11} /> Done
                           </button>
@@ -325,6 +332,15 @@ export default function TasksPage() {
                 </div>
               );
             })}
+            
+            {/* ✅ BONUS: Secondary "Add Task" button at the bottom of the list */}
+            {/* This ensures that even when the list has items, users don't have to scroll back to the top to add a new one. */}
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="w-full py-3 mt-4 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300 hover:bg-violet-50/50 transition-all text-sm flex items-center justify-center gap-2 font-semibold cursor-pointer"
+            >
+              <Plus size={16} /> Add another task
+            </button>
           </div>
         )}
       </div>
