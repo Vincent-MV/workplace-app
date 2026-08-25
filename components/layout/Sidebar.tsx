@@ -4,8 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -45,16 +43,18 @@ const GLOBAL_NAV = [
   { label: "Search", href: "/search", icon: Search },
 ];
 
+// ✅ 1. Make sure onLogoutClick is in the interface
 interface SidebarProps {
-  onClose: () => void;
-  onAddWorkspace: () => void;
+  onClose?: () => void;
+  onAddWorkspace?: () => void;
+  onLogoutClick: () => void; // <-- The Sidebar just needs this trigger
 }
 
-export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
-  const router = useRouter();
-
+// ✅ 2. Destructure onLogoutClick here
+export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: SidebarProps) {
   const pathname = usePathname();
   const { workspaces, activeWorkspace, setActiveWorkspace, deleteWorkspace, loading } = useWorkspace();
+  
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
@@ -62,17 +62,11 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
     setConfirmDelete(null);
   };
 
-    const handleLogout = async () => {
-    // 1. Tell Supabase to end the session
-    await supabase.auth.signOut();
-    // 2. Redirect to the landing page
-    router.push("/");
-    // 3. Force Next.js to refresh server state (clears any cached auth data)
-    router.refresh(); 
-  };
+  // ❌ REMOVED: useRouter, supabase, performLogout, and isLogoutModalOpen state.
+  // The Sidebar is now a "dumb" component. It just tells the parent "Hey, the user clicked logout!"
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-300 overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-900 text-slate-300 overflow-hidden w-64 flex-shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
@@ -81,16 +75,17 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
           </div>
           <span className="font-bold text-white text-sm tracking-wide">Nexus</span>
         </div>
-        <button
-          onClick={onClose}
-          className="lg:hidden text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          <X size={16} />
-        </button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto py-3 scrollable">
-
         {/* ── WORKSPACES ── */}
         <div className="px-3 mb-3">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-2 mb-2">
@@ -115,13 +110,13 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
                         <span className="text-xs text-red-300 flex-1">Delete &ldquo;{ws.name}&rdquo;?</span>
                         <button
                           onClick={() => handleDelete(ws.id)}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-300 px-1.5 py-0.5 bg-red-800/50 rounded"
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300 px-1.5 py-0.5 bg-red-800/50 rounded cursor-pointer"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setConfirmDelete(null)}
-                          className="text-[10px] text-slate-400 hover:text-slate-200"
+                          className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer"
                         >
                           No
                         </button>
@@ -160,7 +155,7 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setConfirmDelete(ws.id); }}
-                          className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all flex-shrink-0"
+                          className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all flex-shrink-0 cursor-pointer"
                           title="Delete workspace"
                         >
                           <Trash2 size={12} />
@@ -171,13 +166,15 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
                 );
               })}
 
-              <button
-                onClick={onAddWorkspace}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors border border-dashed border-slate-700 mt-1"
-              >
-                <Plus size={13} />
-                <span>Add Workspace</span>
-              </button>
+              {onAddWorkspace && (
+                <button
+                  onClick={onAddWorkspace}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors border border-dashed border-slate-700 mt-1 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Add Workspace</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -209,7 +206,7 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
                     href={href}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                      "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors cursor-pointer",
                       active
                         ? "text-white"
                         : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
@@ -250,7 +247,7 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
                   href={href}
                   onClick={onClose}
                   className={cn(
-                    "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                    "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors cursor-pointer",
                     active
                       ? "bg-slate-700 text-white"
                       : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
@@ -265,10 +262,11 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
         </div>
       </div>
 
-      <div className="mt-auto pt-4 border-t border-slate-800">
+      {/* ✅ Footer: Centralized Sign Out Button */}
+      <div className="mt-auto pt-4 border-t border-slate-800 px-3 pb-4">
         <button 
-          onClick={handleLogout}
-          className="px-15 flex items-center gap-2 w-full text-sm text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors p-2 rounded-lg"
+          onClick={onLogoutClick} // ✅ Just triggers the parent's state. No logic here!
+          className="flex items-center justify-center gap-2 w-full text-sm text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors p-2.5 rounded-xl cursor-pointer"
         >
           <LogOut size={16} />
           <span>Sign Out</span>
@@ -279,7 +277,6 @@ export default function Sidebar({ onClose, onAddWorkspace }: SidebarProps) {
       <div className="px-4 py-3 border-t border-slate-800">
         <p className="text-xs text-slate-600 text-center">Nexus v1.0</p>
       </div>
-
     </div>
   );
 }
