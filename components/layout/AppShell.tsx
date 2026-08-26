@@ -17,11 +17,11 @@ import { AIChat } from "@/components/ai/AIChat";
 import AddTaskModal from "@/components/modals/AddTaskModal";
 import AddMeetingModal from "@/components/modals/AddMeetingModal";
 import AddWorkspaceModal from "@/components/modals/AddWorkspaceModal";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // ✅ 1. ADDED THIS IMPORT
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 interface AppShellProps {
   children: React.ReactNode;
-  onAddWorkspace?: () => void; // ✅ 2. FIXED TYPESCRIPT INTERFACE
+  onAddWorkspace?: () => void;
 }
 
 export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
@@ -35,7 +35,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); // ✅ State for logout
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const handleTaskAdded = () => {
     setTaskRefreshKey((k) => k + 1);
@@ -47,7 +47,6 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
     setAddMeetingOpen(false);
   };
 
-  // ✅ Logic to actually perform the logout
   const performLogout = async () => {
     await supabase.auth.signOut();
     router.push("/");
@@ -55,7 +54,9 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50">
+    // ✅ Main container - uses flex to put sidebar and content side-by-side
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+      
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -64,21 +65,22 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         />
       )}
 
-      {/* Left Sidebar */}
-      <aside
+      {/* Left Sidebar - Fixed on mobile, part of flex on desktop */}
+      <div
         className={`
-          fixed inset-y-0 left-0 z-50 w-[220px] lg:relative lg:z-auto
-          transform transition-transform duration-200
+          fixed lg:relative z-50 w-[260px] h-full flex-shrink-0
+          transform transition-transform duration-200 ease-in-out
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         <Sidebar
-          onAddWorkspace={onAddWorkspace} 
-          onLogoutClick={() => setIsLogoutModalOpen(true)} // ✅ Triggers the modal
+          onClose={() => setSidebarOpen(false)}
+          onAddWorkspace={onAddWorkspace}
+          onLogoutClick={() => setIsLogoutModalOpen(true)}
         />
-      </aside>
+      </div>
 
-      {/* Center: topbar + content */}
+      {/* Main Content Area - Takes remaining space */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
@@ -88,35 +90,27 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         />
         <AccountabilityBanner refreshKey={taskRefreshKey} />
         
-        <main className="flex-1 scrollable p-4 md:p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           <DailyBriefing />
           {children}
         </main>
       </div>
 
-      {/* Right Panel overlay on mobile */}
-      {rightPanelOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 xl:hidden animate-fade-in"
-          onClick={() => setRightPanelOpen(false)}
-        />
-      )}
-
-      {/* Right Panel */}
-      <aside
+      {/* Right Panel - Fixed on mobile, part of flex on desktop */}
+      <div
         className={`
-          fixed inset-y-0 right-0 z-50 w-[300px] xl:relative xl:z-auto xl:block
-          transform transition-transform duration-200
-          ${rightPanelOpen ? "translate-x-0" : "translate-x-full xl:translate-x-0"}
+          fixed lg:relative z-50 w-[300px] h-full flex-shrink-0
+          transform transition-transform duration-200 ease-in-out
+          ${rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
         `}
       >
         <RightPanel
           refreshKey={taskRefreshKey}
-          onAskAI={() => setIsAiChatOpen(true)} 
+          onAskAI={() => setIsAiChatOpen(true)}
         />
-      </aside>
+      </div>
 
-      {/* Floating mobile buttons */}
+      {/* Mobile floating buttons */}
       <button
         className="fixed bottom-4 left-4 z-30 lg:hidden bg-slate-800 text-white p-3 rounded-full shadow-lg cursor-pointer"
         onClick={() => setSidebarOpen(true)}
@@ -124,6 +118,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
       >
         <Menu size={20} />
       </button>
+      
       <button
         className="fixed bottom-4 right-4 z-30 xl:hidden bg-slate-800 text-white p-3 rounded-full shadow-lg cursor-pointer"
         onClick={() => setRightPanelOpen(true)}
@@ -132,9 +127,9 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         <PanelRight size={20} />
       </button>
 
-      {/* Global AI Chat */}
+      {/* AI Chat */}
       <AIChat isOpen={isAiChatOpen} onClose={() => setIsAiChatOpen(false)} />
-        
+
       {/* Modals */}
       {addTaskOpen && (
         <AddTaskModal onClose={() => setAddTaskOpen(false)} onSaved={handleTaskAdded} />
@@ -146,9 +141,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         <AddWorkspaceModal onClose={() => setAddWorkspaceOpen(false)} />
       )}
 
-      {/* ✅ 3. LOGOUT MODAL AT THE ROOT LEVEL */}
-      {/* Because ConfirmModal uses `fixed inset-0 z-[100]`, it will perfectly 
-          center itself over the ENTIRE screen, ignoring the sidebar's boundaries. */}
+      {/* Logout Confirmation Modal */}
       <ConfirmModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
