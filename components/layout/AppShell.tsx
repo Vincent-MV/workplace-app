@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+
+
+import { useState, lazy, Suspense } from "react"; 
 import { Menu, PanelRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 // Components
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
-import RightPanel from "./RightPanel";
+
 import AccountabilityBanner from "@/components/banners/AccountabilityBanner";
 import DailyBriefing from "@/components/dashboard/DailyBriefing";
 import { AIChat } from "@/components/ai/AIChat";
@@ -18,11 +20,14 @@ import AddTaskModal from "@/components/modals/AddTaskModal";
 import AddMeetingModal from "@/components/modals/AddMeetingModal";
 import AddWorkspaceModal from "@/components/modals/AddWorkspaceModal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
+import { useWorkspace } from "@/context/WorkspaceContext";
 
 interface AppShellProps {
   children: React.ReactNode;
   onAddWorkspace?: () => void;
 }
+
+const RightPanel = lazy(() => import("./RightPanel"));
 
 export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   const router = useRouter();
@@ -36,6 +41,8 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const { clearSession } = useWorkspace(); // Get it from context
+  const [sessionKey, setSessionKey] = useState(0); 
 
   const handleTaskAdded = () => {
     setTaskRefreshKey((k) => k + 1);
@@ -48,14 +55,25 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   };
 
   const performLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh(); 
-  };
+  // 1. INSTANTLY wipe all workspace/task data from React memory
+  clearSession(); 
+  
+  // 2. End the Supabase session
+  await supabase.auth.signOut();
+  
+  // 3. Force Next.js to clear server caches
+  router.refresh(); 
+  
+  // 4. Change the key to force React to destroy and rebuild the UI tree
+  setSessionKey((prev) => prev + 1); 
+  
+  // 5. Redirect
+  router.push("/"); 
+};
 
   return (
     // ✅ Main container - uses flex to put sidebar and content side-by-side
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div key={sessionKey}className="flex h-screen w-full overflow-hidden bg-slate-50">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
@@ -104,10 +122,12 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
           ${rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
         `}
       >
+        <Suspense fallback={<div className="w-full h-full bg-slate-100 animate-pulse" />} >
         <RightPanel
           refreshKey={taskRefreshKey}
           onAskAI={() => setIsAiChatOpen(true)}
         />
+        </Suspense>
       </div>
 
       {/* Mobile floating buttons */}
