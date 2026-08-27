@@ -10,7 +10,6 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Workspace } from "@/lib/types";
-import { MOCK_WORKSPACES } from "@/lib/mock-data";
 
 interface WorkspaceContextValue {
   workspaces: Workspace[];
@@ -20,69 +19,63 @@ interface WorkspaceContextValue {
   deleteWorkspace: (id: string) => Promise<void>;
   loading: boolean;
   isDemo: boolean;
+  clearSession: () => void; // ✅ 1. ADDED TO INTERFACE
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-
-export  function WorkspaceProvider({ children }: { children: ReactNode }) {
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
   
-  // context/WorkspaceContext.tsx
-
-const fetchWorkspaces = useCallback(async () => {
-  setLoading(true);
-  
-  // ✅ NEW: Check if user is authenticated first
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !user) {
-    // No authenticated user - clear everything
-    console.warn("No authenticated user in WorkspaceContext");
-    setWorkspaces([]);
-    setIsDemo(false);
-    setActiveWorkspaceState(null);
-    setLoading(false);
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("user_id", user.id)  // ✅ Filter by authenticated user
-    .eq("is_active", true)
-    .order("created_at");
-
-  if (!error && data && data.length > 0) {
-    const seen = new Set<string>();
-    const unique = data.filter((w: Workspace) => {
-      const key = w.name.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+  const fetchWorkspaces = useCallback(async () => {
+    setLoading(true);
     
-    setWorkspaces(unique);
-    setIsDemo(false);
-    setActiveWorkspaceState((prev) => {
-      if (prev) {
-        const found = data.find((w: Workspace) => w.id === prev.id);
-        return found ?? data[0];
-      }
-      return data[0];
-    });
-  } else {
-    // ✅ NO MOCK DATA - if no workspaces, user should be on onboarding
-    setWorkspaces([]);
-    setIsDemo(false);
-    setActiveWorkspaceState(null);
-  }
-  
-  setLoading(false);
-}, []);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      setWorkspaces([]);
+      setIsDemo(false);
+      setActiveWorkspaceState(null);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("created_at");
+
+    if (!error && data && data.length > 0) {
+      const seen = new Set<string>();
+      const unique = data.filter((w: Workspace) => {
+        const key = w.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      
+      setWorkspaces(unique);
+      setIsDemo(false);
+      setActiveWorkspaceState((prev) => {
+        if (prev) {
+          const found = data.find((w: Workspace) => w.id === prev.id);
+          return found ?? data[0];
+        }
+        return data[0];
+      });
+    } else {
+      setWorkspaces([]);
+      setIsDemo(false);
+      setActiveWorkspaceState(null);
+    }
+    
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -108,6 +101,13 @@ const fetchWorkspaces = useCallback(async () => {
     await fetchWorkspaces();
   }, [isDemo, fetchWorkspaces]);
 
+  // ✅ 2. ADDED: The "Nuke" function to instantly clear all user data from React state
+  const clearSession = useCallback(() => {
+    setWorkspaces([]);
+    setActiveWorkspaceState(null);
+    setIsDemo(false);
+  }, []);
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -118,6 +118,7 @@ const fetchWorkspaces = useCallback(async () => {
         deleteWorkspace,
         loading,
         isDemo,
+        clearSession, // ✅ 3. EXPOSED IN PROVIDER VALUE
       }}
     >
       {children}

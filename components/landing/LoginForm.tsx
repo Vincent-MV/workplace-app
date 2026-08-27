@@ -80,7 +80,7 @@ export default function LoginForm({ onAuthSuccess }: LoginFormProps) {
     setPasswordError(validatePassword(password));
   };
 
-  const handleAuth = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 1. Gate submit on client-side validation
@@ -106,8 +106,6 @@ export default function LoginForm({ onAuthSuccess }: LoginFormProps) {
         email,
         password,
         options: {
-          // Since you don't have an email sender, we skip the redirect 
-          // or you can leave it if you plan to add one later.
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
@@ -118,6 +116,10 @@ export default function LoginForm({ onAuthSuccess }: LoginFormProps) {
         setMessage({ text: "✓ Account created! Redirecting...", ok: true });
         setTimeout(() => {
           onAuthSuccess?.();
+          
+          // ✅ ADDITION 1: Force Next.js to recognize the new session cookie
+          router.refresh(); 
+          
           router.push("/onboarding");
         }, 1000);
       } else {
@@ -140,6 +142,10 @@ export default function LoginForm({ onAuthSuccess }: LoginFormProps) {
         setMessage({ text: "Invalid email or password.", ok: false });
       } else {
         onAuthSuccess?.();
+        
+        // ✅ ADDITION 2: Force Next.js to recognize the new session cookie
+        router.refresh(); 
+        
         router.push("/dashboard");
       }
     }
