@@ -1,9 +1,8 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+// lib/supabase/server.ts
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-// 1. MUST be an async function in Next.js 15
 export async function createClient() {
-  // 2. MUST await the cookies() call
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -20,7 +19,8 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Ignore if called from a Server Component without middleware
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing access tokens.
           }
         },
       },
