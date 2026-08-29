@@ -1,13 +1,12 @@
 // app/dashboard/page.tsx
-// 🚨 DO NOT PUT "use client" HERE. Leave this blank at the top.
+// 🚨 NO "use client" here!
 
 import { Suspense } from "react";
 import AppShell from "@/components/layout/AppShell";
 import TodayPriorities from "@/components/dashboard/TodayPriorities";
-// ... import your other dashboard components (Meetings, Habits, etc.)
+import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings"; // ✅ Import it
 
-// Simple loading skeleton
-function DashboardSkeleton() {
+function Skeleton() {
   return <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />;
 }
 
@@ -20,17 +19,25 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500">Your command center for today</p>
         </div>
 
-        {/* ✅ Because this page is a Server Component, it can safely render Server Components */}
+        {/* Today's Priorities */}
         <section>
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
             Today's Priorities
           </h2>
-          <Suspense fallback={<DashboardSkeleton />}>
+          <Suspense fallback={<Skeleton />}>
             <TodayPriorities />
           </Suspense>
         </section>
 
-        {/* ... render your other components here ... */}
+        {/* ✅ Upcoming Meetings */}
+        <section>
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
+            Upcoming Meetings
+          </h2>
+          <Suspense fallback={<Skeleton />}>
+            <UpcomingMeetings />
+          </Suspense>
+        </section>
         
       </div>
     </AppShell>
