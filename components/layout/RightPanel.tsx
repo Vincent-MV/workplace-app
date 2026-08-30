@@ -6,12 +6,12 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task, Meeting } from "@/lib/types";
 import MiniCalendar from "@/components/dashboard/MiniCalendar";
-import { Bot, Mic, MapPin, MessageSquare } from "lucide-react";
-import { Button } from '@/components/ui/button';
+import { Bot, Mic, MapPin, MessageSquare, X } from "lucide-react";
 
 interface RightPanelProps {
   refreshKey: number;
   onAskAI: () => void;
+  onClose?: () => void;
 }
 
 const QUICK_ACCESS = [
@@ -20,7 +20,7 @@ const QUICK_ACCESS = [
   { label: "Location", href: "/location", icon: MapPin },
 ];
 
-export default function RightPanel({ refreshKey, onAskAI }: RightPanelProps) {
+export default function RightPanel({ refreshKey, onAskAI, onClose }: RightPanelProps) {
   const { workspaces } = useWorkspace();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -42,20 +42,29 @@ export default function RightPanel({ refreshKey, onAskAI }: RightPanelProps) {
   }, [workspaces, refreshKey]);
 
   return (
-    <div className="flex flex-col h-full bg-white border-l border-slate-200 overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0">
+    <div className="flex flex-col w-full h-full bg-white border-l border-slate-200 shadow-xl lg:shadow-none">
+      {/* Header with close button */}
+      <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
           Overview
         </h2>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+            aria-label="Close panel"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 scrollable">
-        {/* Mini Calendar */}
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
         <div className="p-3 border-b border-slate-100">
           <MiniCalendar tasks={tasks} meetings={meetings} workspaces={workspaces} />
         </div>
 
-        {/* Quick Access */}
         <div className="p-3 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
             Quick Access
@@ -65,6 +74,7 @@ export default function RightPanel({ refreshKey, onAskAI }: RightPanelProps) {
               <Link
                 key={href}
                 href={href}
+                onClick={onClose}
                 className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 text-slate-600 hover:text-slate-800 text-sm transition-colors"
               >
                 <Icon size={14} className="text-slate-400" />
@@ -75,25 +85,15 @@ export default function RightPanel({ refreshKey, onAskAI }: RightPanelProps) {
         </div>
       </div>
 
-      {/* AI Button — sticky bottom */}
-      <div className="p-3 border-t border-slate-100 flex-shrink-0">
+      {/* AI Button */}
+      <div className="p-4 border-t border-slate-100 flex-shrink-0 bg-white">
         <button
           onClick={onAskAI}
-          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm shadow-violet-500/20 cursor-pointer"
         >
-          <MessageSquare size={14} />
-          <span className="text-slate-200 text-sm">Ask AI...</span>
+          <MessageSquare size={16} />
+          <span>Ask AI Secretary</span>
         </button>
-      </div>
-        <div className="mt-auto pt-4 border-t">
-        <Button 
-          onClick={onAskAI} 
-          variant="outline" 
-          size="sm"
-          className="w-full gap-2"
-        >
-          <MessageSquare className="h-4 w-4" /> Ask AI Secretary
-        </Button>
       </div>
     </div>
   );
