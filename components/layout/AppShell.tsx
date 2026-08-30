@@ -1,26 +1,21 @@
 "use client";
 
-
-
 import { useState, lazy, Suspense } from "react"; 
-import { Menu, PanelRight } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useWorkspace } from "@/context/WorkspaceContext";
 
-// Components
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
-
 import AccountabilityBanner from "@/components/banners/AccountabilityBanner";
 import DailyBriefing from "@/components/dashboard/DailyBriefing";
 import { AIChat } from "@/components/ai/AIChat";
 
-// Modals
 import AddTaskModal from "@/components/modals/AddTaskModal";
 import AddMeetingModal from "@/components/modals/AddMeetingModal";
 import AddWorkspaceModal from "@/components/modals/AddWorkspaceModal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
-import { useWorkspace } from "@/context/WorkspaceContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -31,6 +26,7 @@ const RightPanel = lazy(() => import("./RightPanel"));
 
 export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   const router = useRouter();
+  const { clearSession } = useWorkspace();
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
@@ -41,7 +37,6 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const { clearSession } = useWorkspace(); // Get it from context
   const [sessionKey, setSessionKey] = useState(0); 
 
   const handleTaskAdded = () => {
@@ -55,25 +50,15 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   };
 
   const performLogout = async () => {
-  // 1. INSTANTLY wipe all workspace/task data from React memory
-  clearSession(); 
-  
-  // 2. End the Supabase session
-  await supabase.auth.signOut();
-  
-  // 3. Force Next.js to clear server caches
-  router.refresh(); 
-  
-  // 4. Change the key to force React to destroy and rebuild the UI tree
-  setSessionKey((prev) => prev + 1); 
-  
-  // 5. Redirect
-  router.push("/"); 
-};
+    clearSession(); 
+    await supabase.auth.signOut();
+    router.refresh(); 
+    setSessionKey((prev) => prev + 1); 
+    router.push("/"); 
+  };
 
   return (
-    // ✅ Main container - uses flex to put sidebar and content side-by-side
-    <div key={sessionKey}className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div key={sessionKey} className="flex h-screen w-full overflow-hidden bg-slate-50">
       
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
@@ -83,14 +68,8 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         />
       )}
 
-      {/* Left Sidebar - Fixed on mobile, part of flex on desktop */}
-      <div
-        className={`
-          fixed lg:relative z-50 w-[260px] h-full flex-shrink-0
-          transform transition-transform duration-200 ease-in-out
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-        `}
-      >
+      {/* Left Sidebar */}
+      <div className={`fixed lg:relative z-50 w-[260px] h-full flex-shrink-0 transform transition-transform duration-200 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <Sidebar
           onClose={() => setSidebarOpen(false)}
           onAddWorkspace={onAddWorkspace}
@@ -98,7 +77,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         />
       </div>
 
-      {/* Main Content Area - Takes remaining space */}
+      {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
@@ -114,19 +93,22 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         </main>
       </div>
 
-      {/* Right Panel - Fixed on mobile, part of flex on desktop */}
-      <div
-        className={`
-          fixed lg:relative z-50 w-[300px] h-full flex-shrink-0
-          transform transition-transform duration-200 ease-in-out
-          ${rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
-        `}
-      >
-        <Suspense fallback={<div className="w-full h-full bg-slate-100 animate-pulse" />} >
-        <RightPanel
-          refreshKey={taskRefreshKey}
-          onAskAI={() => setIsAiChatOpen(true)}
+      {/* Mobile Right Panel overlay */}
+      {rightPanelOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden animate-fade-in"
+          onClick={() => setRightPanelOpen(false)}
         />
+      )}
+
+      {/* ✅ Right Panel - FIXED POSITIONING */}
+      <div className={`fixed top-0 right-0 lg:relative lg:top-auto lg:right-auto z-50 w-[300px] h-full flex-shrink-0 transform transition-transform duration-200 ease-in-out ${rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}`}>
+        <Suspense fallback={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
+          <RightPanel
+            refreshKey={taskRefreshKey}
+            onAskAI={() => setIsAiChatOpen(true)}
+            onClose={() => setRightPanelOpen(false)}
+          />
         </Suspense>
       </div>
 
@@ -138,30 +120,13 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
       >
         <Menu size={20} />
       </button>
-      
-      <button
-        className="fixed bottom-4 right-4 z-30 xl:hidden bg-slate-800 text-white p-3 rounded-full shadow-lg cursor-pointer"
-        onClick={() => setRightPanelOpen(true)}
-        aria-label="Open right panel"
-      >
-        <PanelRight size={20} />
-      </button>
-
-      {/* AI Chat */}
-      <AIChat isOpen={isAiChatOpen} onClose={() => setIsAiChatOpen(false)} />
 
       {/* Modals */}
-      {addTaskOpen && (
-        <AddTaskModal onClose={() => setAddTaskOpen(false)} onSaved={handleTaskAdded} />
-      )}
-      {addMeetingOpen && (
-        <AddMeetingModal onClose={() => setAddMeetingOpen(false)} onSaved={handleMeetingAdded} />
-      )}
-      {addWorkspaceOpen && (
-        <AddWorkspaceModal onClose={() => setAddWorkspaceOpen(false)} />
-      )}
+      <AIChat isOpen={isAiChatOpen} onClose={() => setIsAiChatOpen(false)} />
+      {addTaskOpen && <AddTaskModal onClose={() => setAddTaskOpen(false)} onSaved={handleTaskAdded} />}
+      {addMeetingOpen && <AddMeetingModal onClose={() => setAddMeetingOpen(false)} onSaved={handleMeetingAdded} />}
+      {addWorkspaceOpen && <AddWorkspaceModal onClose={() => setAddWorkspaceOpen(false)} />}
 
-      {/* Logout Confirmation Modal */}
       <ConfirmModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
