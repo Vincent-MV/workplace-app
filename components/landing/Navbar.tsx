@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
+import Logo from "@/app/icon.png";
 
 export default function Navbar() {
   const scrollToSection = (id: string) => {
@@ -25,8 +27,10 @@ export default function Navbar() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <span className="text-white font-bold text-lg tracking-tighter">N</span>
+        <div className="w-9 h-9 flex items-center justify-center ">
+          <span className="text-white font-bold text-lg tracking-tighter">
+            <Image alt="N" src={Logo}/>
+          </span>
         </div>
         <span className="text-lg font-semibold text-white/90 tracking-tight">Nexus</span>
       </motion.div>

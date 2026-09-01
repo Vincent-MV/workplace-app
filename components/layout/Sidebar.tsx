@@ -13,7 +13,7 @@ import {
   FileText,
   Mic,
   FolderOpen,
-  Image,
+  Images,
   MapPin,
   Bot,
   Search,
@@ -24,6 +24,9 @@ import {
   LogOut
 } from "lucide-react";
 import { useState } from "react";
+import Logo from "@/app/icon.png"
+import Image from "next/image";
+
 
 const WORKSPACE_NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -33,7 +36,7 @@ const WORKSPACE_NAV = [
   { label: "Lesson Library", href: "/lessons", icon: BookOpen },
   { label: "Notes", href: "/notes", icon: FileText },
   { label: "Storage", href: "/storage", icon: FolderOpen },
-  { label: "Photos", href: "/photos", icon: Image },
+  { label: "Photos", href: "/photos", icon: Images },
 ];
 
 const GLOBAL_NAV = [
@@ -70,8 +73,8 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-violet-500 flex items-center justify-center">
-            <span className="text-white font-bold text-xs">N</span>
+          <div className="w-9 h-9  flex items-center justify-center">
+            <Image alt="N" src={Logo}  />
           </div>
           <span className="font-bold text-white text-sm tracking-wide">Nexus</span>
         </div>
