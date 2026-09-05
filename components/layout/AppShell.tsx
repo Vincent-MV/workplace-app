@@ -19,12 +19,11 @@ import ConfirmModal from "@/components/modals/ConfirmModal";
 
 interface AppShellProps {
   children: React.ReactNode;
-  onAddWorkspace?: () => void;
 }
 
 const RightPanel = lazy(() => import("./RightPanel"));
 
-export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
+export default function AppShell({ children }: AppShellProps) {
   const router = useRouter();
   const { clearSession } = useWorkspace();
   
@@ -32,7 +31,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addMeetingOpen, setAddMeetingOpen] = useState(false);
-  const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
+  const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false); // ✅ State for the modal
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
@@ -72,7 +71,8 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
       <div className={`fixed lg:relative z-50 w-[260px] h-full flex-shrink-0 transform transition-transform duration-200 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <Sidebar
           onClose={() => setSidebarOpen(false)}
-          onAddWorkspace={onAddWorkspace}
+          // ✅ FIX: Pass the function that actually opens the modal, NOT the undefined prop
+          onAddWorkspace={() => setAddWorkspaceOpen(true)} 
           onLogoutClick={() => setIsLogoutModalOpen(true)}
         />
       </div>
@@ -101,7 +101,7 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
         />
       )}
 
-      {/* ✅ Right Panel - FIXED POSITIONING */}
+      {/* Right Panel */}
       <div className={`fixed top-0 right-0 lg:relative lg:top-auto lg:right-auto z-50 w-[300px] h-full flex-shrink-0 transform transition-transform duration-200 ease-in-out ${rightPanelOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}`}>
         <Suspense fallback={<div className="w-full h-full bg-slate-100 animate-pulse" />}>
           <RightPanel
@@ -120,12 +120,21 @@ export default function AppShell({ children, onAddWorkspace }: AppShellProps) {
       >
         <Menu size={20} />
       </button>
-
-      {/* Modals */}
+      
+      {/* ✅ Modals (Cleaned up, no duplicates) */}
       <AIChat isOpen={isAiChatOpen} onClose={() => setIsAiChatOpen(false)} />
-      {addTaskOpen && <AddTaskModal onClose={() => setAddTaskOpen(false)} onSaved={handleTaskAdded} />}
-      {addMeetingOpen && <AddMeetingModal onClose={() => setAddMeetingOpen(false)} onSaved={handleMeetingAdded} />}
-      {addWorkspaceOpen && <AddWorkspaceModal onClose={() => setAddWorkspaceOpen(false)} />}
+      
+      {addTaskOpen && (
+        <AddTaskModal onClose={() => setAddTaskOpen(false)} onSaved={handleTaskAdded} />
+      )}
+      
+      {addMeetingOpen && (
+        <AddMeetingModal onClose={() => setAddMeetingOpen(false)} onSaved={handleMeetingAdded} />
+      )}
+      
+      {addWorkspaceOpen && (
+        <AddWorkspaceModal onClose={() => setAddWorkspaceOpen(false)} />
+      )}
 
       <ConfirmModal
         isOpen={isLogoutModalOpen}

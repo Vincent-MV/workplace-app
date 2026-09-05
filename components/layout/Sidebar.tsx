@@ -24,9 +24,8 @@ import {
   LogOut
 } from "lucide-react";
 import { useState } from "react";
-import Logo from "@/app/icon.png"
+import Logo from "@/app/icon.png";
 import Image from "next/image";
-
 
 const WORKSPACE_NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -46,18 +45,15 @@ const GLOBAL_NAV = [
   { label: "Search", href: "/search", icon: Search },
 ];
 
-// ✅ 1. Make sure onLogoutClick is in the interface
 interface SidebarProps {
   onClose?: () => void;
   onAddWorkspace?: () => void;
-  onLogoutClick: () => void; // <-- The Sidebar just needs this trigger
+  onLogoutClick: () => void;
 }
 
-// ✅ 2. Destructure onLogoutClick here
 export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: SidebarProps) {
   const pathname = usePathname();
   const { workspaces, activeWorkspace, setActiveWorkspace, deleteWorkspace, loading } = useWorkspace();
-  
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
@@ -65,30 +61,24 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
     setConfirmDelete(null);
   };
 
-  // ❌ REMOVED: useRouter, supabase, performLogout, and isLogoutModalOpen state.
-  // The Sidebar is now a "dumb" component. It just tells the parent "Hey, the user clicked logout!"
-
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 overflow-hidden w-64 flex-shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9  flex items-center justify-center">
-            <Image alt="N" src={Logo}  />
+          <div className="w-9 h-9 flex items-center justify-center">
+            <Image alt="Nexus Logo" src={Logo} width={36} height={36} className="rounded-md" />
           </div>
           <span className="font-bold text-white text-sm tracking-wide">Nexus</span>
         </div>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="lg:hidden text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
-          >
+          <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
             <X size={16} />
           </button>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto py-3 scrollable">
+      <div className="flex-1 overflow-y-auto py-3">
         {/* ── WORKSPACES ── */}
         <div className="px-3 mb-3">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-2 mb-2">
@@ -97,9 +87,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
 
           {loading ? (
             <div className="space-y-1 px-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-8 rounded-lg bg-slate-800 animate-pulse" />
-              ))}
+              {[1, 2].map((i) => <div key={i} className="h-8 rounded-lg bg-slate-800 animate-pulse" />)}
             </div>
           ) : (
             <div className="space-y-1">
@@ -111,49 +99,25 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
                     {confirming ? (
                       <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-red-900/30 border border-red-700/50">
                         <span className="text-xs text-red-300 flex-1">Delete &ldquo;{ws.name}&rdquo;?</span>
-                        <button
-                          onClick={() => handleDelete(ws.id)}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-300 px-1.5 py-0.5 bg-red-800/50 rounded cursor-pointer"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(null)}
-                          className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer"
-                        >
-                          No
-                        </button>
+                        <button onClick={() => handleDelete(ws.id)} className="text-[10px] font-bold text-red-400 hover:text-red-300 px-1.5 py-0.5 bg-red-800/50 rounded cursor-pointer">Yes</button>
+                        <button onClick={() => setConfirmDelete(null)} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">No</button>
                       </div>
                     ) : (
                       <div
                         className={cn(
                           "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all cursor-pointer",
-                          isActive
-                            ? "text-white"
-                            : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                          isActive ? "text-white" : "hover:bg-slate-800 text-slate-400 hover:text-slate-200"
                         )}
-                        style={
-                          isActive
-                            ? { backgroundColor: `${ws.color}25`, borderLeft: `3px solid ${ws.color}` }
-                            : { borderLeft: "3px solid transparent" }
-                        }
+                        style={isActive ? { backgroundColor: `${ws.color}25`, borderLeft: `3px solid ${ws.color}` } : { borderLeft: "3px solid transparent" }}
                         onClick={() => setActiveWorkspace(ws)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => e.key === "Enter" && setActiveWorkspace(ws)}
                       >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: ws.color }}
-                        />
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: ws.color }} />
                         <span className="truncate font-medium flex-1">{ws.name}</span>
                         {isActive && (
-                          <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded-full mr-1"
-                            style={{ backgroundColor: `${ws.color}30`, color: ws.color }}
-                          >
-                            active
-                          </span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full mr-1" style={{ backgroundColor: `${ws.color}30`, color: ws.color }}>active</span>
                         )}
                         <button
                           type="button"
@@ -169,6 +133,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
                 );
               })}
 
+              {/* ✅ ONLY ONE "Add Workspace" button, placed correctly at the end of the list */}
               {onAddWorkspace && (
                 <button
                   onClick={onAddWorkspace}
@@ -188,14 +153,8 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         {activeWorkspace && (
           <div className="px-3 mb-4">
             <div className="flex items-center gap-1.5 px-2 mb-2">
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: activeWorkspace.color }}
-              />
-              <p
-                className="text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: activeWorkspace.color }}
-              >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeWorkspace.color }} />
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: activeWorkspace.color }}>
                 {activeWorkspace.name}
               </p>
             </div>
@@ -210,15 +169,9 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
                     onClick={onClose}
                     className={cn(
                       "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors cursor-pointer",
-                      active
-                        ? "text-white"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                      active ? "text-white" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                     )}
-                    style={
-                      active
-                        ? { backgroundColor: `${activeWorkspace.color}20`, color: activeWorkspace.color }
-                        : {}
-                    }
+                    style={active ? { backgroundColor: `${activeWorkspace.color}20`, color: activeWorkspace.color } : {}}
                   >
                     <Icon size={14} className="flex-shrink-0" />
                     <span>{label}</span>
@@ -235,9 +188,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         <div className="px-3 mb-4">
           <div className="flex items-center gap-1.5 px-2 mb-1">
             <Globe size={11} className="text-slate-500" />
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-              Global
-            </p>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Global</p>
           </div>
           <p className="text-[10px] text-slate-600 px-2 mb-2">Shared across all workspaces</p>
 
@@ -251,9 +202,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
                   onClick={onClose}
                   className={cn(
                     "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors cursor-pointer",
-                    active
-                      ? "bg-slate-700 text-white"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    active ? "bg-slate-700 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                   )}
                 >
                   <Icon size={14} className="flex-shrink-0" />
@@ -268,7 +217,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
       {/* ✅ Footer: Centralized Sign Out Button */}
       <div className="mt-auto pt-4 border-t border-slate-800 px-3 pb-4">
         <button 
-          onClick={onLogoutClick} // ✅ Just triggers the parent's state. No logic here!
+          onClick={onLogoutClick}
           className="flex items-center justify-center gap-2 w-full text-sm text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors p-2.5 rounded-xl cursor-pointer"
         >
           <LogOut size={16} />
@@ -276,10 +225,6 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         </button>
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-800">
-        <p className="text-xs text-slate-600 text-center">Nexus v1.0</p>
-      </div>
     </div>
   );
 }
