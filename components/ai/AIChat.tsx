@@ -20,6 +20,7 @@ interface AIChatProps {
 }
 
 export function AIChat({ isOpen, onClose }: AIChatProps) {
+
   const { activeWorkspace } = useWorkspace(); 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');

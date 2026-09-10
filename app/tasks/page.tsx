@@ -7,41 +7,13 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task } from "@/lib/types";
 import { todayISO, cn } from "@/lib/utils";
-import { Coffee, Sun, CalendarClock, Sparkles, Plus } from "lucide-react";
+import { Plus } from "lucide-react"; // Removed unused icons, they are in the constant file now!
+
+// ✅ 1. Import is at the TOP of the file, not in the JSX
+import { TASK_EMPTY_STATES } from "@/lib/constant/task-empty-states";
 import DeletionTaskModal from "@/components/modals/DeletionTaskModal";
 import AddTaskModal from "@/components/modals/AddTaskModal";
-import TaskItem from "@/app/tasks/taskItem"; // ✅ Corrected import path
-
-const EMPTY_STATES = {
-  overdue: {
-    icon: <Coffee size={40} className="text-amber-500" />,
-    iconBg: "bg-amber-100",
-    title: "Don't stress, it happens! 🧘",
-    desc: "Take a deep breath. Reschedule it or tackle just one small thing today. Progress over perfection.",
-    buttonText: "Reschedule a task",
-  },
-  today: {
-    icon: <Sun size={40} className="text-violet-500" />,
-    iconBg: "bg-violet-100",
-    title: "You've got this! 💪",
-    desc: "Focus on your top priorities. Take it one step at a time and celebrate the small wins.",
-    buttonText: "Add a task for today",
-  },
-  upcoming: {
-    icon: <CalendarClock size={40} className="text-blue-500" />,
-    iconBg: "bg-blue-100",
-    title: "Looking ahead! 🗓️",
-    desc: "A little planning now saves a lot of stress later. Your future self will thank you.",
-    buttonText: "Schedule a future task",
-  },
-  all: {
-    icon: <Sparkles size={40} className="text-green-500" />,
-    iconBg: "bg-green-100",
-    title: "All caught up! 🎉",
-    desc: "Enjoy the free time, or add a new task to keep your momentum going.",
-    buttonText: "Add your first task",
-  },
-};
+import TaskItem from "./taskItem"; 
 
 export default function TasksPage() {
   const { activeWorkspace, workspaces } = useWorkspace();
@@ -163,34 +135,42 @@ export default function TasksPage() {
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200"
           >
-            <div className={cn("p-4 rounded-full mb-4", EMPTY_STATES[filter].iconBg)}>
-              {EMPTY_STATES[filter].icon}
+            <div className={cn("p-4 rounded-full mb-4", TASK_EMPTY_STATES[filter].iconBg)}>
+              {/* ✅ 2. Using bracket notation to dynamically access the correct state */}
+              {TASK_EMPTY_STATES[filter].icon}
             </div>
-            <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATES[filter].title}</h3>
-            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATES[filter].desc}</p>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              {TASK_EMPTY_STATES[filter].title}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
+              {TASK_EMPTY_STATES[filter].desc}
+            </p>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-violet-500/20 hover:shadow-md hover:shadow-violet-500/30 cursor-pointer"
             >
-              <Plus size={16} /> {EMPTY_STATES[filter].buttonText}
+              <Plus size={16} /> {TASK_EMPTY_STATES[filter].buttonText}
             </button>
           </motion.div>
         ) : (
           <div className="space-y-2">
-            {/* ✅ COMPLEXITY FIXED: The map is now clean and shallow! */}
             {filteredTasks.map((task) => (
               <TaskItem 
                 key={task.id}
                 task={task}
                 workspace={wsMap[task.workspace_id]}
-                isRescheduling={reschedulingId === task.id}
-                rescheduleDate={rescheduleDate}
-                onToggle={toggleTask}
-                onDelete={initiateDelete}
-                onMarkDone={markDone}
-                onSetReschedulingId={setReschedulingId}
-                onSetRescheduleDate={setRescheduleDate}
-                onReschedule={handleReschedule}
+                reschedule={{
+                  isRescheduling: reschedulingId === task.id,
+                  date: rescheduleDate,
+                  setId: setReschedulingId,
+                  setDate: setRescheduleDate,
+                  onSubmit: handleReschedule,
+                }}
+                actions={{
+                  onToggle: toggleTask,
+                  onDelete: initiateDelete,
+                  onMarkDone: markDone,
+                }}
               />
             ))}
             
