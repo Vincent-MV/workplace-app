@@ -1,0 +1,37 @@
+
+1. functional checks
+
+What functional tests to validate this code change do not exist or are missing?
+
+What possible vulnerabilities or security issues could this code introduce?
+
+
+
+2. Verify context and intent
+
+How does this refactored code section align with our project architecture?
+
+What similar features or established design patterns did you identify and model your code after?
+
+When examining this code, what assumptions about business logic, design preferences, or user behaviors have been made?
+
+What are the potential issues or limitations with this approach?
+
+
+3. Assess code quality
+
+
+What are some readability and maintainability issues in this code?
+
+How can this code be improved for clarity and simplicity? Suggest an alternative structure or variable names to enhance clarity.
+
+How could this code be broken down into smaller, testable units?
+
+
+4. Scrutinize dependencies
+
+
+Analyze the attached package.json file and list all dependencies with their respective licenses.
+
+Are each of the dependencies listed in this package.json file actively maintained (that is, not archived and have recent maintainer activity)?
+
