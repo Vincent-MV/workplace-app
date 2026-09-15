@@ -65,24 +65,7 @@ export default function RightPanel({ refreshKey, onAskAI, onClose }: RightPanelP
           <MiniCalendar tasks={tasks} meetings={meetings} workspaces={workspaces} />
         </div>
 
-        <div className="p-3 border-b border-slate-100">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
-            Quick Access
-          </p>
-          <div className="space-y-1">
-            {QUICK_ACCESS.map(({ label, href, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={onClose}
-                className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 text-slate-600 hover:text-slate-800 text-sm transition-colors"
-              >
-                <Icon size={14} className="text-slate-400" />
-                {label}
-              </Link>
-            ))}
-          </div>
-        </div>
+        
       </div>
 
       {/* AI Button */}
