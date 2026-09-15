@@ -56,40 +56,50 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
   const selected = selectedDay ? itemsForDay(selectedDay) : null;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-slate-700">{monthName}</span>
-        <div className="flex gap-1">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+      
+      {/* ✅ 1. Added "Calendar" title at the top */}
+      <h3 className="text-base font-bold text-slate-900 mb-3">Calendar</h3>
+
+      {/* ✅ 2. New Header Layout: < Month > with Year below */}
+      <div className="flex flex-col items-center mb-4">
+        <div className="flex items-center justify-between w-full px-2">
           <button
             onClick={prevMonth}
-            className="p-0.5 rounded hover:bg-slate-100 text-slate-500 transition-colors"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={18} />
           </button>
+          <span className="text-sm font-bold text-slate-800">
+            {monthName.split(" ")[0]}
+          </span>
           <button
             onClick={nextMonth}
-            className="p-0.5 rounded hover:bg-slate-100 text-slate-500 transition-colors"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={18} />
           </button>
         </div>
+        <span className="text-xs font-semibold text-slate-500 mt-0.5">
+          {monthName.split(" ")[1]}
+        </span>
       </div>
 
-      {/* Day labels */}
-      <div className="grid grid-cols-7 mb-1">
+      {/* ✅ 3. Day labels changed to dark/black so they are easily visible */}
+      <div className="grid grid-cols-7 mb-2">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-medium text-slate-400 py-0.5">
+          <div key={i} className="text-center text-xs font-bold text-slate-900 py-1">
             {d}
           </div>
         ))}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-1">
         {Array.from({ length: startDay }).map((_, i) => (
-          <div key={`empty-${i}`} />
+          <div key={`empty-${i}`} className="h-9 w-full bg-slate-100/60 rounded-lg" />
         ))}
+        
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
           const dots = dotsForDay(day);
@@ -100,22 +110,23 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
               key={day}
               onClick={() => setSelectedDay(sel ? null : day)}
               className={cn(
-                "flex flex-col items-center py-0.5 rounded-lg transition-all",
+                "flex flex-col items-center justify-center h-9 w-full rounded-lg transition-all relative",
+                // ✅ 4. Changed today highlight to light blue (bg-blue-500)
                 active
-                  ? "ring-2 ring-violet-500 ring-offset-1 bg-violet-50 text-violet-700 font-bold shadow-sm"
+                  ? "bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20"
                   : sel
-                  ? "bg-slate-100 ring-1 ring-slate-300 text-slate-800"
-                  : "hover:bg-slate-100 text-slate-600"
+                  ? "bg-slate-200 text-slate-800 font-semibold"
+                  : "hover:bg-slate-100 text-slate-600 font-medium"
               )}
             >
-              <span className="text-[11px]">{day}</span>
+              <span className="text-sm leading-none">{day}</span>
               {dots.length > 0 && (
-                <div className="flex gap-0.5 mt-0.5">
+                <div className="flex gap-0.5 mt-1 absolute bottom-1">
                   {dots.map((color, di) => (
                     <span
                       key={di}
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: color }}
+                      className="w-1 h-1 rounded-full"
+                      style={{ backgroundColor: active ? "#ffffff" : color }}
                     />
                   ))}
                 </div>
@@ -127,30 +138,30 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
 
       {/* Popover for selected day */}
       {selectedDay && selected && (
-        <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-200 animate-slide-down">
-          <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-slide-down">
+          <p className="text-xs font-bold text-slate-700 mb-2">
             {monthName.split(" ")[0]} {selectedDay}
           </p>
           {selected.dayTasks.length === 0 && selected.dayMeetings.length === 0 ? (
-            <p className="text-[11px] text-slate-400">Nothing scheduled</p>
+            <p className="text-xs text-slate-400 italic">Nothing scheduled</p>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {selected.dayTasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-1.5">
+                <div key={t.id} className="flex items-center gap-2">
                   <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: wsMap[t.workspace_id]?.color ?? "#94a3b8" }}
                   />
-                  <span className="text-[11px] text-slate-600 truncate">{t.title}</span>
+                  <span className="text-xs text-slate-600 truncate font-medium">{t.title}</span>
                 </div>
               ))}
               {selected.dayMeetings.map((m) => (
-                <div key={m.id} className="flex items-center gap-1.5">
+                <div key={m.id} className="flex items-center gap-2">
                   <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: wsMap[m.workspace_id]?.color ?? "#94a3b8" }}
                   />
-                  <span className="text-[11px] text-slate-600 truncate">
+                  <span className="text-xs text-slate-600 truncate font-medium">
                     {formatDateTime(m.scheduled_at)} · {m.title}
                   </span>
                 </div>
