@@ -21,17 +21,15 @@ export default function Hero() {
       animate="show"
       transition={{ duration: 0.6 }}
     >
-      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 ring-1 ring-violet-500/20 text-violet-300 text-xs font-medium w-fit">
-        <span>✨</span>
-        AI-Powered Productivity
-      </div>
+  
 
       <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter leading-[1.1]">
         <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/40">
           Your second brain.
         </span>
         <br />
-        <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400">
+        {/* ✅ Changed to a static, solid violet color that fits the theme */}
+        <span className="text-violet-400">
           Unified.
         </span>
       </h1>
@@ -50,7 +48,10 @@ export default function Hero() {
             transition={{ delay: 0.5 + index * 0.1 }}
           >
             <Check size={16} className="text-violet-400" />
-            <span>{feature}</span>
+            {/* ✅ Made uppercase with slight tracking for a premium look */}
+            <span className="uppercase tracking-wider font-medium text-xs">
+              {feature}
+            </span>
           </motion.div>
         ))}
       </div>
