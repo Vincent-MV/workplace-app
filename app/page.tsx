@@ -45,25 +45,6 @@ export default function LandingPage() {
             <FeaturesGrid />
           </section>
 
-          {/* Resources / CTA Section */}
-          <section id="resources" className="scroll-mt-24 px-6 py-20 md:py-32 md:px-10 max-w-7xl mx-auto">
-            <div className="p-8 md:p-12 rounded-2xl bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border border-violet-500/20 backdrop-blur-xl text-center">
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                Ready to get started?
-              </h3>
-              <p className="text-zinc-400 mb-8 max-w-xl mx-auto">
-                Join thousands of students and professionals who use Nexus to stay organized.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <button className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition-all hover:scale-105 shadow-lg shadow-violet-500/25">
-                  Create Free Account
-                </button>
-                <button className="px-6 py-3 bg-white/[0.03] hover:bg-white/[0.06] ring-1 ring-white/10 text-white font-medium rounded-lg transition-all">
-                  Learn More
-                </button>
-              </div>
-            </div>
-          </section>
         </main>
         
         <Footer />

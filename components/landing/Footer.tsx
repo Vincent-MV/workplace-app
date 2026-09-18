@@ -3,33 +3,30 @@
 import { motion } from "framer-motion";
 import { Github, Twitter, Linkedin, Mail, ArrowRight } from "lucide-react";
 
-const FOOTER_LINKS = {
-  Product: ["Features", "Pricing", "Changelog", "Roadmap"],
-  Company: ["About", "Blog", "Careers", "Contact"],
-  Resources: ["Help Center", "Guides", "API Docs", "Community"],
-};
-
 const SOCIAL_LINKS = [
   { icon: Github, href: "#", label: "GitHub" },
   { icon: Twitter, href: "#", label: "Twitter" },
   { icon: Linkedin, href: "#", label: "LinkedIn" },
-  { icon: Mail, href: "#", label: "Email" },
+  { icon: Mail, href: "mailto:hello@nexus.app", label: "Email" },
 ];
 
 export default function Footer() {
   return (
     <footer className="relative z-10 border-t border-white/10 mt-20">
-      <div className="px-6 py-12 md:px-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          {/* Brand */}
-          <div className="lg:col-span-2">
+      <div className="px-6 py-12 md:px-10 max-w-7xl mx-auto">
+        
+        {/* Top Section: Brand & Contact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          
+          {/* Brand & Socials */}
+          <div>
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">N</span>
               </div>
               <span className="text-lg font-semibold text-white">Nexus</span>
             </div>
-            <p className="text-sm text-zinc-400 mb-4 max-w-xs">
+            <p className="text-sm text-zinc-400 mb-6 max-w-xs">
               Your second brain for productivity, learning, and growth.
             </p>
             <div className="flex gap-3">
@@ -46,21 +43,20 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Links */}
-          {Object.entries(FOOTER_LINKS).map(([category, links]) => (
-            <div key={category}>
-              <h4 className="text-white font-semibold mb-3">{category}</h4>
-              <ul className="space-y-2">
-                {links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-zinc-400 hover:text-white transition-colors">
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* ✅ Contact for Inquiries */}
+          <div>
+            <h4 className="text-white font-semibold mb-3">Contact & Inquiries</h4>
+            <p className="text-sm text-zinc-400 mb-4 max-w-sm">
+              Have questions, partnership opportunities, or need support? We'd love to hear from you.
+            </p>
+            <a 
+              href="mailto:hello@nexus.app" 
+              className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors text-sm font-medium"
+            >
+              <Mail size={16} />
+              hello@nexus.app
+            </a>
+          </div>
         </div>
 
         {/* Newsletter */}
@@ -83,15 +79,12 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Copyright */}
+        {/* ✅ Bottom Bar: Cleaned up */}
         <div className="mt-8 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-zinc-500">
-          <p>© 2024 Nexus. All rights reserved.</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
-          </div>
+          <p>© 2026 Nexus. All rights reserved.</p>
+          {/* Removed Privacy Policy and Terms of Service as requested */}
         </div>
+        
       </div>
     </footer>
   );

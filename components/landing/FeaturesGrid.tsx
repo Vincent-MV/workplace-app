@@ -94,9 +94,19 @@ export default function FeaturesGrid() {
             className={`p-6 rounded-xl ${feature.bgColor} border ${feature.borderColor} backdrop-blur-xl hover:bg-white/[0.06] hover:border-white/30 transition-all duration-300 group cursor-pointer`}
             whileHover={{ y: -4 }}
           >
-            <feature.icon size={28} className={`${feature.color} mb-4 group-hover:scale-110 transition-transform`} />
-            <h3 className="text-white font-semibold mb-2 text-lg">{feature.label}</h3>
-            <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
+            {/* ✅ Icon and Title are now side-by-side */}
+            <div className="flex items-center gap-3 mb-3">
+              <feature.icon 
+                size={24} 
+                className={`${feature.color} group-hover:scale-110 transition-transform`} 
+              />
+              <h3 className="text-white font-semibold text-lg">{feature.label}</h3>
+            </div>
+            
+            {/* Description stays below */}
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              {feature.description}
+            </p>
           </motion.div>
         ))}
       </motion.div>
