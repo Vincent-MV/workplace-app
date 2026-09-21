@@ -54,7 +54,7 @@ export default function Footer() {
               className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors text-sm font-medium"
             >
               <Mail size={16} />
-              hello@nexus.app
+              valladolidvincent22@gmail.com
             </a>
           </div>
         </div>
