@@ -5,7 +5,16 @@ import AppShell from "@/components/layout/AppShell";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Podcast } from "@/lib/types";
-import { Mic, Play, Pause, Plus, X, Upload, Loader2 } from "lucide-react";
+import { 
+  Mic, Play, Pause, Plus, X, Upload, Loader2, AlertCircle, 
+  Trash2 
+} from "lucide-react";
+import { 
+  uploadPodcastAction, 
+  MAX_PODCASTS, 
+  MAX_FILE_SIZE_MB 
+} from "@/lib/actions/UploadPodcast";
+import { deletePodcastAction } from "@/lib/actions/deletePodcast";
 
 export default function PodcastsPage() {
   const { workspaces } = useWorkspace();
@@ -18,8 +27,14 @@ export default function PodcastsPage() {
   // Modal & Upload State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
+  // Delete Confirmation State
+  const [podcastToDelete, setPodcastToDelete] = useState<Podcast | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -52,12 +67,22 @@ export default function PodcastsPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setUploadError(null);
+    
     if (file) {
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        setUploadError(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+        setSelectedFile(null);
+        e.target.value = "";
+        return;
+      }
+      
       setSelectedFile(file);
-      // Auto-fill title with file name (without extension) if title is empty
       if (!title) {
         setTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
+    } else {
+      setSelectedFile(null);
     }
   };
 
@@ -66,51 +91,50 @@ export default function PodcastsPage() {
     if (!userId || !selectedFile || !title.trim()) return;
 
     setUploading(true);
+    setUploadError(null);
 
-    try {
-      // 1. Generate a unique file name to prevent collisions
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${userId}/${fileName}`; // Organize by user ID
+    const result = await uploadPodcastAction(userId, selectedFile, title);
 
-      // 2. Upload to Supabase Storage bucket named "Audio"
-      const { error: uploadError } = await supabase.storage
-        .from("Audio")
-        .upload(filePath, selectedFile, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // 3. Get the public URL of the uploaded file
-      const { data: { publicUrl } } = supabase.storage
-        .from("Audio")
-        .getPublicUrl(filePath);
-
-      // 4. Insert the record into the database
-      const { error: dbError } = await supabase.from("podcasts").insert({
-        user_id: userId,
-        title: title.trim(),
-        audio_url: publicUrl,
-        duration_secs: 0, // Can be enhanced later with audio metadata parsing
-        play_position: 0,
-      });
-
-      if (dbError) throw dbError;
-
-      // 5. Reset form and refresh list
-      setTitle("");
-      setSelectedFile(null);
-      setIsModalOpen(false);
-      fetchPodcasts();
-
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("Failed to upload audio. Please check your Supabase storage settings.");
-    } finally {
+    if (!result.success) {
+      setUploadError(result.error || "An unknown error occurred.");
       setUploading(false);
+      return;
     }
+
+    setTitle("");
+    setSelectedFile(null);
+    setIsModalOpen(false);
+    setUploading(false);
+    fetchPodcasts();
+  };
+
+  const handleDelete = async () => {
+    if (!podcastToDelete || !userId) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    const result = await deletePodcastAction(
+      podcastToDelete.id,
+      podcastToDelete.audio_url,
+      userId
+    );
+
+    if (!result.success) {
+      setDeleteError(result.error || "Failed to delete podcast.");
+      setDeleting(false);
+      return;
+    }
+
+    if (playingId === podcastToDelete.id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+    }
+
+    setPodcasts(prev => prev.filter(p => p.id !== podcastToDelete.id));
+    
+    setDeleting(false);
+    setPodcastToDelete(null);
   };
 
   const formatDuration = (secs: number) => {
@@ -119,29 +143,42 @@ export default function PodcastsPage() {
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
+  const isLimitReached = podcasts.length >= MAX_PODCASTS;
+
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Podcasts</h1>
             <p className="text-sm text-slate-500">Your audio library</p>
+            {isLimitReached && (
+              <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> 
+                Limit reached: You can only upload {MAX_PODCASTS} files.
+              </p>
+            )}
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
+            disabled={isLimitReached}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+              isLimitReached 
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed" 
+                : "bg-violet-600 hover:bg-violet-700 text-white"
+            }`}
           >
-            <Plus size={15} /> Add Audio
+            <Plus size={15} /> {isLimitReached ? "Limit Reached" : "Add Audio"}
           </button>
         </div>
 
-        {/* ✅ Upload Modal */}
+        {/* Upload Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative animate-slide-up">
               <button 
-                onClick={() => { setIsModalOpen(false); setSelectedFile(null); setTitle(""); }}
+                onClick={() => { setIsModalOpen(false); setSelectedFile(null); setTitle(""); setUploadError(null); }}
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <X size={20} />
@@ -150,6 +187,13 @@ export default function PodcastsPage() {
               <h3 className="text-lg font-semibold text-slate-800 mb-4">Upload Audio</h3>
 
               <form onSubmit={handleUpload} className="space-y-4">
+                {uploadError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                    <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-600">{uploadError}</p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Title *</label>
                   <input
@@ -162,14 +206,16 @@ export default function PodcastsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Audio File *</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Audio File * <span className="text-slate-400 font-normal">(Max {MAX_FILE_SIZE_MB}MB)</span>
+                  </label>
                   <div className="relative">
                     <input
                       type="file"
                       accept="audio/*"
                       onChange={handleFileChange}
                       required
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
                     <div className="flex items-center gap-3 px-3 py-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-violet-400 hover:bg-violet-50/50 transition-all">
                       <Upload size={20} className="text-slate-400" />
@@ -198,6 +244,65 @@ export default function PodcastsPage() {
           </div>
         )}
 
+        {/* Delete Confirmation Modal */}
+        {podcastToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative animate-slide-up">
+              <button 
+                onClick={() => { setPodcastToDelete(null); setDeleteError(null); }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <Trash2 size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800">Delete Podcast?</h3>
+                  <p className="text-xs text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-lg mb-4">
+                <p className="text-sm font-medium text-slate-800 truncate">{podcastToDelete.title}</p>
+              </div>
+
+              {deleteError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 mb-4">
+                  <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-600">{deleteError}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPodcastToDelete(null); setDeleteError(null); }}
+                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} /> Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {loading ? (
           <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}</div>
@@ -222,6 +327,16 @@ export default function PodcastsPage() {
                   <p className="text-sm font-medium text-slate-800 truncate">{p.title}</p>
                   <p className="text-xs text-slate-400">{formatDuration(p.duration_secs)}</p>
                 </div>
+                
+                {/* ✅ UPDATED: Trash icon is now ALWAYS visible, but subtle until hovered */}
+                <button
+                  onClick={() => setPodcastToDelete(p)}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                  title="Delete podcast"
+                  aria-label={`Delete ${p.title}`}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             ))}
           </div>
