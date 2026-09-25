@@ -63,7 +63,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 overflow-hidden w-64 flex-shrink-0">
-      {/* Header */}
+      {/* Header (Untouched) */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 flex items-center justify-center">
@@ -78,7 +78,17 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto py-3">
+      {/* ✅ UPDATED: Scrollable Area with Custom Subtle Scrollbar */}
+      <div 
+        className="flex-1 overflow-y-auto py-3 
+          [&::-webkit-scrollbar]:w-1.5 
+          [&::-webkit-scrollbar-track]:bg-transparent 
+          [&::-webkit-scrollbar-thumb]:bg-slate-800 
+          [&::-webkit-scrollbar-thumb]:rounded-full 
+          [&::-webkit-scrollbar-thumb]:hover:bg-slate-700
+          [scrollbar-width:thin] 
+          [scrollbar-color:#1e293b_transparent]"
+      >
         {/* ── WORKSPACES ── */}
         <div className="px-3 mb-3">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-2 mb-2">
@@ -133,7 +143,6 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
                 );
               })}
 
-              {/* ✅ ONLY ONE "Add Workspace" button, placed correctly at the end of the list */}
               {onAddWorkspace && (
                 <button
                   onClick={onAddWorkspace}
@@ -214,7 +223,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         </div>
       </div>
 
-      {/* ✅ Footer: Centralized Sign Out Button */}
+      {/* Footer (Untouched) */}
       <div className="mt-auto pt-4 border-t border-slate-800 px-3 pb-4">
         <button 
           onClick={onLogoutClick}
@@ -224,7 +233,6 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
           <span>Sign Out</span>
         </button>
       </div>
-
     </div>
   );
 }

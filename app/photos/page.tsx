@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import AppShell from "@/components/layout/AppShell";
@@ -6,10 +7,12 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import { Image, Plus, AlertCircle } from "lucide-react";
 import { MAX_PHOTOS } from "@/lib/actions/UploadPhotos";
+import { deletePhotoAction } from "@/lib/actions/deletePhotos"; // ✅ Import the action
+
 import UploadPhotoModal from "./UploadPhotosModal";
 import PhotoGridItem from "./PhotoGridItem";
 
-// Note: Ensure 'Photo' is in your lib/types.ts. If not, define it here:
+// Note: Ensure 'Photo' is in your lib/types.ts
 type Photo = { id: string; user_id: string; title: string; image_url: string; uploaded_at: string };
 
 export default function PhotosPage() {
@@ -19,6 +22,9 @@ export default function PhotosPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // ✅ Track which photo is currently being deleted
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchPhotos = async () => {
     if (!userId) return;
@@ -30,12 +36,30 @@ export default function PhotosPage() {
 
   useEffect(() => { fetchPhotos(); }, [userId]);
 
+  // ✅ The Brain Function: Handles the actual deletion
+  const handleDeletePhoto = async (photo: Photo) => {
+    if (!userId) return;
+    
+    setDeletingId(photo.id); // Show loading spinner on this specific photo
+    
+    // Call the action to delete from BOTH Storage and Database
+    const res = await deletePhotoAction(photo.id, photo.image_url, userId);
+    
+    if (res.success) {
+      fetchPhotos(); // Refresh the list
+    } else {
+      alert(res.error); // Show error if it failed
+    }
+    
+    setDeletingId(null); // Hide loading spinner
+  };
+
   const isLimitReached = photos.length >= MAX_PHOTOS;
 
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header (Same as before) */}
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Photos</h1>
@@ -63,7 +87,6 @@ export default function PhotosPage() {
             {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="aspect-square bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
         ) : photos.length === 0 ? (
-          // ✅ Beautiful Empty State
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -84,13 +107,15 @@ export default function PhotosPage() {
             </button>
           </motion.div>
         ) : (
-          // ✅ Photo Grid
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map((p) => (
-              <PhotoGridItem key={p.id} photo={p} onDelete={() => {
-                // Simple inline delete for photos to keep UI fast
-                supabase.from("photos").delete().eq("id", p.id).then(() => fetchPhotos());
-              }} />
+              // ✅ Pass the brain function down to the child
+              <PhotoGridItem 
+                key={p.id} 
+                photo={p} 
+                onDelete={() => handleDeletePhoto(p)} 
+                isDeleting={deletingId === p.id}
+              />
             ))}
           </div>
         )}
