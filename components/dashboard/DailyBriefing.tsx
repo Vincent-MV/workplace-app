@@ -1,130 +1,167 @@
-// components/dashboard/DailyBriefing.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { supabase } from '@/lib/supabase';
-import { Sparkles, RefreshCw, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Sparkles, AlertTriangle, Clock, CheckCircle2, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface TaskReminder {
+  id: string;
+  title: string;
+  due_date: string;
+  daysLeft: number;
+  level: 'overdue' | 'urgent' | 'warning' | 'upcoming';
+}
 
 export default function DailyBriefing() {
   const { activeWorkspace } = useWorkspace();
-  const [briefing, setBriefing] = useState<string>('');
+  const [reminders, setReminders] = useState<TaskReminder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // ✅ NEW: State for minimizing the component
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const fetchBriefing = async (forceRefresh = false) => {
+  useEffect(() => {
     if (!activeWorkspace) return;
-    setLoading(true);
-    setError(null);
+    
+    const fetchReminders = async () => {
+      setLoading(true);
+      
+      // Fetch only incomplete tasks with a due date
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('id, title, due_date, status')
+        .eq('workspace_id', activeWorkspace.id)
+        .neq('status', 'done')
+        .not('due_date', 'is', null)
+        .order('due_date', { ascending: true });
 
-    try {
-      const cachedBriefing = localStorage.getItem('daily_briefing');
-      const lastFetchTime = localStorage.getItem('briefing_timestamp');
-      const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-
-      if (!forceRefresh && cachedBriefing && lastFetchTime && (Date.now() - Number(lastFetchTime) < TWELVE_HOURS)) {
-        setBriefing(cachedBriefing);
+      if (error) {
+        console.error('Error fetching tasks:', error);
         setLoading(false);
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Not logged in');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate day calculation
 
-      const res = await fetch('/api/briefing', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      const processed: TaskReminder[] = (tasks || []).map((task) => {
+        const due = new Date(task.due_date);
+        due.setHours(0, 0, 0, 0);
+        
+        const diffTime = due.getTime() - today.getTime();
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Determine urgency level based on your rules
+        let level: TaskReminder['level'] = 'upcoming';
+        if (daysLeft < 0) level = 'overdue';
+        else if (daysLeft <= 2) level = 'urgent';
+        else if (daysLeft <= 4) level = 'warning';
+
+        return { ...task, daysLeft, level };
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.error === 'rate_limit') {
-          setError(data.message);
-        } else {
-          setError('Could not load briefing.');
+      // Sort by urgency overdue -> urgent -> warning -> upcoming
+      const priorityOrder = { overdue: 0, urgent: 1, warning: 2, upcoming: 3 };
+      processed.sort((a, b) => {
+        if (priorityOrder[a.level] !== priorityOrder[b.level]) {
+          return priorityOrder[a.level] - priorityOrder[b.level];
         }
-        return;
-      }
+        return a.daysLeft - b.daysLeft;
+      });
 
-      setBriefing(data.briefing);
-      localStorage.setItem('daily_briefing', data.briefing);
-      localStorage.setItem('briefing_timestamp', Date.now().toString());
-
-    } catch (err) {
-      setError('Failed to connect to AI.');
-    } finally {
+      setReminders(processed);
       setLoading(false);
+    };
+
+    fetchReminders();
+  }, [activeWorkspace]);
+
+  // Helper to get the correct colors, icons, and text for each level
+  const getReminderUI = (reminder: TaskReminder) => {
+    switch (reminder.level) {
+      case 'overdue':
+        return {
+          icon: <AlertCircle size={16} className="text-red-600" />,
+          bg: 'bg-red-50',
+          border: 'border-red-100',
+          text: 'text-red-700',
+          label: `🚨 Overdue by ${Math.abs(reminder.daysLeft)} day(s)! Do this immediately.`,
+        };
+      case 'urgent':
+        return {
+          icon: <AlertTriangle size={16} className="text-red-600" />,
+          bg: 'bg-red-50',
+          border: 'border-red-100',
+          text: 'text-red-700',
+          label: `🚨 Urgent: Due in ${reminder.daysLeft} day(s). Do this now!`,
+        };
+      case 'warning':
+        return {
+          icon: <Clock size={16} className="text-amber-600" />,
+          bg: 'bg-amber-50',
+          border: 'border-amber-100',
+          text: 'text-amber-700',
+          label: `⚠️ Heads up: Due in ${reminder.daysLeft} days. You should do this soon.`,
+        };
+      default: // upcoming (5+ days)
+        return {
+          icon: <CheckCircle2 size={16} className="text-emerald-600" />,
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-100',
+          text: 'text-emerald-700',
+          label: `✅ On track: Due in ${reminder.daysLeft} days.`,
+        };
     }
   };
 
-  useEffect(() => {
-    fetchBriefing();
-  }, [activeWorkspace]);
-
-  // ✅ NEW: Helper to highlight urgent keywords in the text
-  const renderHighlightedText = (text: string) => {
-    return text.split('\n').map((line, index) => {
-      let className = "text-sm text-slate-700 leading-relaxed block mb-1";
-      
-      if (line.includes('🚨') || line.includes('OVERDUE')) {
-        className = "text-sm font-bold text-red-600 bg-red-50 p-2 rounded-lg mb-2 border border-red-100 block";
-      } else if (line.includes('⚠️') || line.includes('URGENT')) {
-        className = "text-sm font-semibold text-amber-700 bg-amber-50 p-2 rounded-lg mb-2 border border-amber-100 block";
-      } else if (line.trim().startsWith('•')) {
-        className = "text-sm text-slate-700 leading-relaxed block mb-1.5 pl-1";
-      }
-
-      return <span key={index} className={className}>{line}</span>;
-    });
-  };
-
   return (
-    <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-2xl shadow-sm transition-all duration-300">
-      {/* Header (Always Visible) */}
-      <div className="flex items-center justify-between p-4 border-b border-violet-100/50">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm transition-all duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-slate-100">
         <button 
           onClick={() => setIsMinimized(!isMinimized)}
-          className="flex items-center gap-2 text-sm font-semibold text-violet-900 hover:text-violet-700 transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-violet-700 transition-colors"
         >
           <Sparkles size={16} className="text-violet-600" />
           Daily Briefing
           {isMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         </button>
-        
-        <button 
-          onClick={() => fetchBriefing(true)} 
-          disabled={loading}
-          className="text-violet-500 hover:text-violet-700 transition-colors disabled:opacity-50 p-1 rounded hover:bg-violet-100"
-          title="Refresh briefing"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
       </div>
 
-      {/* Content (Collapsible) */}
+      {/* Content */}
       {!isMinimized && (
         <div className="p-4">
-          {loading && !briefing ? (
-            <div className="space-y-2">
-              <div className="h-4 bg-violet-100 rounded animate-pulse w-3/4" />
-              <div className="h-4 bg-violet-100 rounded animate-pulse w-1/2" />
+          {loading ? (
+            <div className="space-y-3">
+              <div className="h-14 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-14 bg-slate-100 rounded-xl animate-pulse" />
             </div>
-          ) : error ? (
-            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-100">
-              <AlertCircle size={14} />
-              {error}
+          ) : reminders.length === 0 ? (
+            <div className="text-center py-6">
+              <CheckCircle2 size={32} className="mx-auto text-emerald-500 mb-2" />
+              <p className="text-sm text-slate-800 font-semibold">All caught up! 🎉</p>
+              <p className="text-xs text-slate-500 mt-1">No upcoming tasks. Enjoy your day.</p>
             </div>
           ) : (
-            // ✅ NEW: Max height with internal scrollbar
-            <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-              {briefing ? (
-                renderHighlightedText(briefing)
-              ) : (
-                <p className="text-sm text-slate-500 italic">No urgent tasks or meetings for today. Enjoy your day!</p>
-              )}
+            <div className="max-h-64 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+              {reminders.map((reminder) => {
+                const ui = getReminderUI(reminder);
+                return (
+                  <div 
+                    key={reminder.id} 
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-xl border transition-all",
+                      ui.bg, ui.border
+                    )}
+                  >
+                    <div className="mt-0.5 flex-shrink-0">{ui.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-xs font-bold mb-1", ui.text)}>{ui.label}</p>
+                      <p className="text-sm font-medium text-slate-800 truncate">{reminder.title}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
