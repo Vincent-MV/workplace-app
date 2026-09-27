@@ -21,7 +21,8 @@ import {
   Plus,
   Globe,
   Trash2,
-  LogOut
+  LogOut,
+  BarChart3
 } from "lucide-react";
 import { useState } from "react";
 import Logo from "@/app/icon.png";
@@ -43,6 +44,7 @@ const GLOBAL_NAV = [
   { label: "AI Tools", href: "/ai-tools", icon: Bot },
   { label: "Location", href: "/location", icon: MapPin },
   { label: "Search", href: "/search", icon: Search },
+  { label: "Stats", href: "/stats", icon: BarChart3 }
 ];
 
 interface SidebarProps {
