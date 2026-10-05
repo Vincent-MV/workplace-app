@@ -69,7 +69,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 flex items-center justify-center">
-            <Image alt="Nexus Logo" src={Logo} width={36} height={36} className="rounded-md" />
+            <Image alt="Nexus Logo" src={Logo} width={36} height={36} className="rounded-md"  style={{ width: 'auto', height: 'auto' }}/>
           </div>
           <span className="font-bold text-white text-sm tracking-wide">Nexus</span>
         </div>

@@ -1,10 +1,15 @@
+"use client"; 
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client"; // Mandatory since this is a client side component
 import { validateEmail, validatePassword } from "@/lib/utils/validation";
 
 export function useLoginForm(onAuthSuccess?: () => void) {
   const router = useRouter();
+  
+  // Initialize the SSR-aware client here
+  const supabase = createClient(); 
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -46,18 +51,29 @@ export function useLoginForm(onAuthSuccess?: () => void) {
       if (error) setMessage({ text: error.message, ok: false });
       else if (data.session) {
         setMessage({ text: "✓ Account created! Redirecting...", ok: true });
-        setTimeout(() => { onAuthSuccess?.(); router.refresh(); router.push("/onboarding"); }, 1000);
+        setTimeout(() => { 
+          onAuthSuccess?.(); 
+          router.refresh(); 
+          window.location.href = "/onboarding"; //  Use hard reload here too for consistency
+        }, 1000);
       } else {
         setMessage({ text: "✓ Account created! Please check your email to confirm.", ok: true });
         setTimeout(() => { setIsSignUp(false); setMessage(null); }, 3000);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMessage({ text: "Invalid email or password.", ok: false });
-      else {
+      // 1. Attempt login
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        setMessage({ text: "Invalid email or password.", ok: false });
+      } else if (data.session) {
+        // 2. Success! 
         onAuthSuccess?.();
-        router.refresh();
-        router.push("/dashboard");
+        
+        // 3. FORCE A HARD RELOAD so the server middleware sees the new cookie
+        window.location.href = "/dashboard"; 
+      } else {
+        setMessage({ text: "Login successful, but no session found.", ok: false });
       }
     }
     setLoading(false);

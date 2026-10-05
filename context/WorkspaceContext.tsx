@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { Workspace } from "@/lib/types";
 
 interface WorkspaceContextValue {
@@ -19,22 +19,28 @@ interface WorkspaceContextValue {
   deleteWorkspace: (id: string) => Promise<void>;
   loading: boolean;
   isDemo: boolean;
-  clearSession: () => void; // ✅ 1. ADDED TO INTERFACE
+  clearSession: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  // ✅ 1. Initialize the SSR client at the top of the component!
+  const supabase = createClient(); 
+
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
   
   const fetchWorkspaces = useCallback(async () => {
+    console.log("🔍 [DEBUG] 1. fetchWorkspaces started");
     setLoading(true);
     
+    // ❌ Removed: const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
+    console.log("🔍 [DEBUG] 2. Auth Check -> User:", user, "Error:", userError);
     if (userError || !user) {
       setWorkspaces([]);
       setIsDemo(false);
@@ -43,6 +49,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    console.log("🔍 [DEBUG] 3. Fetching from DB for user_id:", user.id);
     const { data, error } = await supabase
       .from("workspaces")
       .select("*")
@@ -50,6 +57,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       .eq("is_active", true)
       .order("created_at");
 
+    console.log("🔍 [DEBUG] 4. DB Response -> Data:", data, "Error:", error);
+    
     if (!error && data && data.length > 0) {
       const seen = new Set<string>();
       const unique = data.filter((w: Workspace) => {
@@ -69,13 +78,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return data[0];
       });
     } else {
+      console.warn("⚠️ [DEBUG] No workspaces found or DB error.");
       setWorkspaces([]);
       setIsDemo(false);
       setActiveWorkspaceState(null);
     }
     
     setLoading(false);
-  }, []);
+  }, [supabase]); // ✅ Add supabase to dependency array
 
   useEffect(() => {
     fetchWorkspaces();
@@ -97,11 +107,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    
+    // ✅ This will now work perfectly!
     await supabase.from("workspaces").update({ is_active: false }).eq("id", id);
     await fetchWorkspaces();
-  }, [isDemo, fetchWorkspaces]);
+  }, [isDemo, fetchWorkspaces, supabase]); // ✅ Add supabase to dependency array
 
-  // ✅ 2. ADDED: The "Nuke" function to instantly clear all user data from React state
   const clearSession = useCallback(() => {
     setWorkspaces([]);
     setActiveWorkspaceState(null);
@@ -118,7 +129,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         deleteWorkspace,
         loading,
         isDemo,
-        clearSession, // ✅ 3. EXPOSED IN PROVIDER VALUE
+        clearSession,
       }}
     >
       {children}
