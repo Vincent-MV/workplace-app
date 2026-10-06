@@ -25,22 +25,33 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  // ✅ 1. Initialize the SSR client at the top of the component!
+
+  // Initialize the SSR client at the top of the component!
   const supabase = createClient(); 
 
+  // for debugging in development
+  const isDev = process.env.NODE_ENV === 'development';
+  
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
   
   const fetchWorkspaces = useCallback(async () => {
-    console.log("🔍 [DEBUG] 1. fetchWorkspaces started");
+    
+    
     setLoading(true);
     
     // ❌ Removed: const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    console.log("🔍 [DEBUG] 2. Auth Check -> User:", user, "Error:", userError);
+    if (isDev) {
+      console.log("🔍 [DEBUG] Auth Check -> User:", user);
+    }
+
+    if (isDev){
+      console.log("🔍 [DEBUG] 2. Auth Check -> User:", user, "Error:", userError);
+    }
+
     if (userError || !user) {
       setWorkspaces([]);
       setIsDemo(false);
@@ -49,7 +60,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    console.log("🔍 [DEBUG] 3. Fetching from DB for user_id:", user.id);
+    if (isDev){
+      console.log("🔍 [DEBUG] 3. Fetching from DB for user_id:", user.id);
+    }
+
     const { data, error } = await supabase
       .from("workspaces")
       .select("*")
@@ -57,7 +71,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       .eq("is_active", true)
       .order("created_at");
 
-    console.log("🔍 [DEBUG] 4. DB Response -> Data:", data, "Error:", error);
+    if (isDev){
+      console.log("🔍 [DEBUG] 4. DB Response -> Data:", data, "Error:", error);
+    }
     
     if (!error && data && data.length > 0) {
       const seen = new Set<string>();
@@ -108,10 +124,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // ✅ This will now work perfectly!
     await supabase.from("workspaces").update({ is_active: false }).eq("id", id);
     await fetchWorkspaces();
-  }, [isDemo, fetchWorkspaces, supabase]); // ✅ Add supabase to dependency array
+  }, [isDemo, fetchWorkspaces, supabase]); // Add supabase to dependency array
 
   const clearSession = useCallback(() => {
     setWorkspaces([]);

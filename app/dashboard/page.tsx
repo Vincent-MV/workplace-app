@@ -1,10 +1,9 @@
-// app/dashboard/page.tsx
-// 🚨 NO "use client" here!
+// server component
 
 import { Suspense } from "react";
 import AppShell from "@/components/layout/AppShell";
 import TodayPriorities from "@/components/dashboard/TodayPriorities";
-import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings"; // ✅ Import it
+import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings"; // Import it
 
 function Skeleton() {
   return <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />;

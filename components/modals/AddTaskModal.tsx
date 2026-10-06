@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { todayISO } from "@/lib/utils";
 import { X } from "lucide-react";
 import type { TaskPriority } from "@/lib/types";
@@ -21,6 +21,7 @@ const PRIORITIES: { label: string; value: TaskPriority; color: string }[] = [
 export default function AddTaskModal({ onClose, onSaved }: Props) {
   // ✅ We only need activeWorkspace now. No need for the full workspaces list.
   const { activeWorkspace } = useWorkspace();
+  const supabase = createClient();
   
   const [title, setTitle] = useState("");
   // ❌ REMOVED: const [workspaceId, setWorkspaceId] = useState(...)
@@ -43,14 +44,15 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
     setError("");
 
     // ✅ UPDATED: Auto-assign workspace_id and user_id from the active workspace
-    const { error: err } = await supabase.from("tasks").insert({
-      title: title.trim(),
-      workspace_id: activeWorkspace.id,
-      user_id: activeWorkspace.user_id,
-      due_date: dueDate || null,
-      priority,
-      status: "todo",
-      confirmed: false,
+    const { error: err } = await supabase
+      .from("tasks").insert({
+        title: title.trim(),
+        workspace_id: activeWorkspace?.id,
+        user_id: activeWorkspace.user_id,
+        due_date: dueDate || null,
+        priority,
+        status: "todo",
+        confirmed: false,
     });
 
     if (err) {

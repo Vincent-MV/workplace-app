@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import type { Habit, HabitLog } from "@/lib/types";
 import { todayISO } from "@/lib/utils";
 import { Flame, Plus, X, CheckSquare, Square } from "lucide-react";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // ✅ Use the generic modal
+import ConfirmModal from "@/components/modals/ConfirmModal"; // Use the generic modal
 
 interface HabitWithLog extends Habit {
   todayLog?: HabitLog;

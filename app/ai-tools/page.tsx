@@ -7,7 +7,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { AiTool } from "@/lib/types";
 import { Bot, Plus, X, ExternalLink, Wand2 } from "lucide-react";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // ✅ Reusable modal
+import ConfirmModal from "@/components/modals/ConfirmModal"; // Reusable modal
 
 const FAVICON_URL = (url: string) => {
   try {
@@ -16,7 +16,7 @@ const FAVICON_URL = (url: string) => {
   } catch { return null; }
 };
 
-// ✅ NEW: Contextual Empty State for AI Tools
+// Contextual Empty State for AI Tools
 const EMPTY_STATE = {
   icon: <Wand2 size={40} className="text-violet-500" />,
   iconBg: "bg-violet-100",
