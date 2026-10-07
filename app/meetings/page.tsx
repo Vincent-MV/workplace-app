@@ -72,10 +72,16 @@ export default function MeetingsPage() {
       <div className="max-w-3xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
+
           <div>
             <h1 className="text-xl font-bold text-slate-800">Meetings</h1>
-            <p className="text-sm text-slate-500">{activeWorkspace?.name}</p>
+            
+            <p className="text-sm text-slate-500">
+              {activeWorkspace?.name}
+            </p>
+          
           </div>
+
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
@@ -97,11 +103,14 @@ export default function MeetingsPage() {
           <div className="space-y-2">
             {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
-        ) : (
+        ) : 
+        (
           <>
             {/* Empty States */}
             {meetings.length === 0 && !showForm && (
+
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200">
+                
                 <div className={`p-4 rounded-full mb-4 ${EMPTY_STATES.none.iconBg}`}>{EMPTY_STATES.none.icon}</div>
                 <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATES.none.title}</h3>
                 <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATES.none.desc}</p>
@@ -109,14 +118,29 @@ export default function MeetingsPage() {
                   <Plus size={16} /> {EMPTY_STATES.none.buttonText}
                 </button>
               </motion.div>
+
             )}
 
             {upcoming.length === 0 && meetings.length > 0 && !showForm && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200 mb-6">
-                <div className={`p-4 rounded-full mb-4 ${EMPTY_STATES.noUpcoming.iconBg}`}>{EMPTY_STATES.noUpcoming.icon}</div>
-                <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATES.noUpcoming.title}</h3>
-                <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATES.noUpcoming.desc}</p>
-                <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-amber-500/20 hover:shadow-md cursor-pointer">
+              <motion.div 
+                          initial={{ opacity: 0, y: 10 }} 
+                          animate={{ opacity: 1, y: 0 }} 
+                          className="flex flex-col items-center justify-center py-12 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200 mb-6">
+               
+                <div className={`p-4 rounded-full mb-4 ${EMPTY_STATES.noUpcoming.iconBg}`}>
+                  {EMPTY_STATES.noUpcoming.icon}
+                </div>
+                
+                <h3 className="text-sm font-semibold text-slate-800 mb-1">
+                  {EMPTY_STATES.noUpcoming.title}
+                </h3>
+                
+                <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
+                    {EMPTY_STATES.noUpcoming.desc}
+                </p>
+
+                <button 
+                    onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-amber-500/20 hover:shadow-md cursor-pointer">
                   <Plus size={16} /> {EMPTY_STATES.noUpcoming.buttonText}
                 </button>
               </motion.div>
@@ -146,6 +170,7 @@ export default function MeetingsPage() {
             )}
           </>
         )}
+
       </div>
 
       {/* Delete Modal */}

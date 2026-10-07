@@ -13,7 +13,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: "#22c55e",
 };
 
-// ✅ FIX 1: Group props to reduce the "10 props" linter warning
+//  Group props to reduce the "10 props" linter warning
 interface TaskItemProps {
   task: Task;
   workspace: Workspace | undefined;
@@ -45,6 +45,7 @@ export default function TaskItem({ task, workspace, reschedule, actions }: TaskI
       style={{ borderLeft: `3px solid ${workspace?.color ?? "#94a3b8"}` }}
     >
       <div className="flex items-start gap-3">
+
         <button
           onClick={() => actions.onToggle(task)}
           className="flex-shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
@@ -53,10 +54,11 @@ export default function TaskItem({ task, workspace, reschedule, actions }: TaskI
           {done ? <CheckSquare size={17} className="text-green-500" /> : <Square size={17} />}
         </button>
         
-        {/* ✅ FIX 2: Extracted middle column reduces JSX depth from 6 to 3 */}
+        {/*  Extracted middle column reduces JSX depth from 6 to 3 */}
         <TaskDetails task={task} />
         
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          
           {workspace && (
             <span
               className="text-[10px] font-medium px-2 py-0.5 rounded-full"
@@ -65,11 +67,13 @@ export default function TaskItem({ task, workspace, reschedule, actions }: TaskI
               {workspace.name}
             </span>
           )}
+
           <span
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: PRIORITY_COLORS[task.priority] ?? "#94a3b8" }}
             title={`Priority: ${task.priority}`}
           />
+
           <button
             onClick={() => actions.onDelete(task)}
             className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
@@ -77,6 +81,7 @@ export default function TaskItem({ task, workspace, reschedule, actions }: TaskI
           >
             <Trash2 size={14} />
           </button>
+          
         </div>
       </div>
 

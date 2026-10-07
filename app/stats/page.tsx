@@ -50,7 +50,7 @@ export default function StatsPage() {
           let completed30Days = 0;
 
           tasks.filter(t => t.status === "done").forEach(t => {
-            // ✅ FIXED: Use due_date as a proxy for completion day for V1
+            //  Use due_date as a proxy for completion day for V1
             const completionDate = t.due_date ? t.due_date.split("T")[0] : today;
             
             if (completionDate >= thirtyDaysAgoStr) {
@@ -118,7 +118,10 @@ export default function StatsPage() {
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+        >
           <h1 className="text-2xl font-bold text-slate-800">Productivity Stats</h1>
           <p className="text-sm text-slate-500 mt-1">
             Track your progress and stay consistent.

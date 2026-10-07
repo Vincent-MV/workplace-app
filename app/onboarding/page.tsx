@@ -29,7 +29,7 @@ const PRESETS = [
     desc: "Classes, assignments, study sessions",
   },
   {
-    name: "Altar Servers",
+    name: "Choir",
     type: "ministry" as WorkspaceType,
     color: "#f59e0b",
     Icon: Church,
@@ -134,6 +134,7 @@ export default function OnboardingPage() {
 
         {/* Preset cards grid */}
         <div className="grid grid-cols-2 gap-3 mb-5">
+
           {PRESETS.map(({ name, color, Icon, desc }) => {
             const active = selected.has(name);
             return (
@@ -155,8 +156,15 @@ export default function OnboardingPage() {
                   </span>
                 )}
                 <Icon size={22} style={{ color }} className="mb-2.5" />
-                <p className="font-semibold text-slate-800 text-sm">{name}</p>
-                <p className="text-xs text-slate-400 mt-0.5 leading-snug">{desc}</p>
+               
+                <p className="font-semibold text-slate-800 text-sm">
+                  {name}
+                </p>
+                
+                <p className="text-xs text-slate-400 mt-0.5 leading-snug">
+                  {desc}
+                </p>
+
               </button>
             );
           })}
@@ -208,6 +216,7 @@ export default function OnboardingPage() {
                     }}
                   />
                 ))}
+                
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">

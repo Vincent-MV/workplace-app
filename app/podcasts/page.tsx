@@ -87,9 +87,14 @@ export default function PodcastsPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}</div>
+          <div 
+              className="space-y-2"
+          >
+                {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
+          </div>
+          
         ) : podcasts.length === 0 ? (
-          // ✅ Beautiful Empty State with Call to Action
+          // Beautiful Empty State with Call to Action
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

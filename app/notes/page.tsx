@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { FileText, Plus, X, Pencil, Check } from "lucide-react";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // ✅ Reusable modal
+import ConfirmModal from "@/components/modals/ConfirmModal"; 
 
 function AutoTextarea({ value, onChange, placeholder, className }: {
   value: string;
@@ -36,7 +36,7 @@ function AutoTextarea({ value, onChange, placeholder, className }: {
   );
 }
 
-// ✅ NEW: Contextual Empty State for Notes
+//  Contextual Empty State for Notes
 const EMPTY_STATE = {
   icon: <FileText size={40} className="text-emerald-500" />,
   iconBg: "bg-emerald-100",
@@ -56,7 +56,7 @@ export default function NotesPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   
-  // ✅ NEW: State for the delete modal
+  // State for the delete modal
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
@@ -100,7 +100,7 @@ export default function NotesPage() {
     fetchNotes();
   };
 
-  // ✅ NEW: Professional delete flow
+  //  Professional delete flow
   const initiateDelete = (note: Note) => {
     setNoteToDelete(note);
   };
@@ -118,7 +118,9 @@ export default function NotesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Notes</h1>
-            <p className="text-sm text-slate-500">{activeWorkspace?.name}</p>
+            <p className="text-sm text-slate-500">
+              {activeWorkspace?.name}
+            </p>
           </div>
           <button 
             onClick={() => setShowForm(true)}
@@ -172,7 +174,8 @@ export default function NotesPage() {
             {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
         ) : notes.length === 0 && !showForm ? (
-          // ✅ NEW: Rich, action-oriented Empty State
+
+          // action-oriented Empty State
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -181,8 +184,15 @@ export default function NotesPage() {
             <div className={`p-4 rounded-full mb-4 ${EMPTY_STATE.iconBg}`}>
               {EMPTY_STATE.icon}
             </div>
-            <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATE.title}</h3>
-            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATE.desc}</p>
+
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              {EMPTY_STATE.title}
+            </h3>
+
+            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
+              {EMPTY_STATE.desc}
+            </p>
+
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-emerald-500/20 hover:shadow-md hover:shadow-emerald-500/30 cursor-pointer"
@@ -239,7 +249,11 @@ export default function NotesPage() {
                   ) : (
                     <>
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-800 leading-tight flex-1">{note.title}</p>
+                        
+                        <p className="text-sm font-semibold text-slate-800 leading-tight flex-1">
+                          {note.title}
+                        </p>
+
                         <div className="flex gap-1 flex-shrink-0">
                           <button 
                             onClick={() => { setEditingId(note.id); setEditTitle(note.title); setEditBody(note.body ?? ""); }}
@@ -248,6 +262,7 @@ export default function NotesPage() {
                           >
                             <Pencil size={13} />
                           </button>
+
                           <button 
                             onClick={() => initiateDelete(note)} 
                             className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors cursor-pointer"
@@ -255,6 +270,7 @@ export default function NotesPage() {
                           >
                             <X size={13} />
                           </button>
+
                         </div>
                       </div>
                       {note.body && (
@@ -274,7 +290,7 @@ export default function NotesPage() {
         )}
       </div>
 
-      {/* ✅ Reusable Confirm Modal for Deletion */}
+      {/* Confirm Modal for Deletion */}
       <ConfirmModal
         isOpen={!!noteToDelete}
         onClose={() => setNoteToDelete(null)}

@@ -9,7 +9,7 @@ import type { Lesson } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { BookOpen, Plus, X } from "lucide-react";
 import type { ImportanceLevel } from "@/lib/types";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // ✅ Reusable modal
+import ConfirmModal from "@/components/modals/ConfirmModal"; 
 
 const IMPORTANCE_COLORS: Record<ImportanceLevel, { bg: string; text: string; label: string }> = {
   low: { bg: "#f1f5f9", text: "#64748b", label: "Low" },
@@ -18,7 +18,7 @@ const IMPORTANCE_COLORS: Record<ImportanceLevel, { bg: string; text: string; lab
   critical: { bg: "#fee2e2", text: "#991b1b", label: "Critical" },
 };
 
-// ✅ NEW: Contextual Empty State for Lesson Library
+// Contextual Empty State for Lesson Library
 const EMPTY_STATE = {
   icon: <BookOpen size={40} className="text-blue-500" />,
   iconBg: "bg-blue-100",
@@ -34,7 +34,7 @@ export default function LessonsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", importance: "medium" as ImportanceLevel, tags: "" });
   
-  // ✅ NEW: State for the delete modal
+  // State for the delete modal
   const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
@@ -69,7 +69,7 @@ export default function LessonsPage() {
     fetchLessons();
   };
 
-  // ✅ NEW: Professional delete flow
+  //  Professional delete flow
   const initiateDelete = (lesson: Lesson) => {
     setLessonToDelete(lesson);
   };
@@ -87,7 +87,9 @@ export default function LessonsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Lesson Library</h1>
-            <p className="text-sm text-slate-500">{activeWorkspace?.name}</p>
+            <p className="text-sm text-slate-500">
+              {activeWorkspace?.name}
+            </p>
           </div>
           <button 
             onClick={() => setShowForm(true)}
@@ -165,7 +167,8 @@ export default function LessonsPage() {
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
         ) : lessons.length === 0 && !showForm ? (
-          // ✅ NEW: Rich, action-oriented Empty State
+
+          // action-oriented Empty State
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -201,7 +204,10 @@ export default function LessonsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-semibold text-slate-800">{lesson.title}</p>
+                        
+                        <p className="text-sm font-semibold text-slate-800">
+                          {lesson.title}
+                        </p>
                         <span 
                           className="text-[10px] font-medium px-2 py-0.5 rounded-full capitalize" 
                           style={{ backgroundColor: imp.bg, color: imp.text }}
@@ -209,14 +215,28 @@ export default function LessonsPage() {
                           {lesson.importance}
                         </span>
                       </div>
-                      {lesson.content && <p className="text-xs text-slate-500 line-clamp-3 mb-2">{lesson.content}</p>}
+
+                      {
+                          lesson.content && 
+                            <p className="text-xs text-slate-500 line-clamp-3 mb-2">
+                              {lesson.content}
+                            </p>
+                      }
+                      
                       <div className="flex items-center gap-2 flex-wrap">
                         {lesson.lesson_tags?.map((tag) => (
-                          <span key={tag.id} className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                          
+                          <span 
+                              key={tag.id} 
+                              className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full"
+                          >
                             #{tag.tag_name}
                           </span>
                         ))}
-                        <span className="text-[10px] text-slate-400 ml-auto">{formatDate(lesson.created_at)}</span>
+                        
+                        <span className="text-[10px] text-slate-400 ml-auto">
+                          {formatDate(lesson.created_at)}
+                        </span>
                       </div>
                     </div>
                     <button 
@@ -234,7 +254,7 @@ export default function LessonsPage() {
         )}
       </div>
 
-      {/* ✅ Reusable Confirm Modal for Deletion */}
+      {/* Reusable Confirm Modal for Deletion */}
       <ConfirmModal
         isOpen={!!lessonToDelete}
         onClose={() => setLessonToDelete(null)}

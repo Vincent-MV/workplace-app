@@ -6,6 +6,8 @@ out
 dist
 code-review
 
+workspaceContent.txt
+
 .env
 .env.*
 !.env.example

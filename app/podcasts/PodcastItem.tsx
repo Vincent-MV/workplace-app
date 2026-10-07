@@ -29,8 +29,13 @@ export default function PodcastItem({ podcast, isPlaying, onTogglePlay, onDelete
       </button>
       
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{podcast.title}</p>
-        <p className="text-xs text-slate-400">{formatDuration(podcast.duration_secs)}</p>
+        <p className="text-sm font-medium text-slate-800 truncate">
+          {podcast.title}
+        </p>
+        
+        <p className="text-xs text-slate-400">
+          {formatDuration(podcast.duration_secs)}
+        </p>
       </div>
       
       <button

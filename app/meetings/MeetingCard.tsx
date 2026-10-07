@@ -18,22 +18,34 @@ export default function MeetingCard({ meeting, workspace, onDelete }: MeetingCar
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800">{meeting.title}</p>
+          
+          <p className="text-sm font-semibold text-slate-800">
+            {meeting.title}
+          </p>
+          
           {meeting.agenda && (
             <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{meeting.agenda}</p>
           )}
+          
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <Clock size={11} />
               {formatDateTime(meeting.scheduled_at)}
             </span>
-            <span className="text-xs text-slate-400">{meeting.duration_mins} min</span>
+            
+            <span className="text-xs text-slate-400">
+                {meeting.duration_mins} min
+            </span>
+            
             {meeting.location && (
+              
               <span className="flex items-center gap-1 text-xs text-slate-400">
                 <MapPin size={11} />
                 {meeting.location}
               </span>
-            )}
+           
+           )}
           </div>
         </div>
 

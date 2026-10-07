@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import type { Habit, HabitLog } from "@/lib/types";
 import { todayISO } from "@/lib/utils";
 import { Flame, Plus, X, CheckSquare, Square } from "lucide-react";
-import ConfirmModal from "@/components/modals/ConfirmModal"; // Use the generic modal
+import ConfirmModal from "@/components/modals/ConfirmModal"; 
 
 interface HabitWithLog extends Habit {
   todayLog?: HabitLog;
@@ -31,7 +31,6 @@ export default function HabitsPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  
   const [habitToDelete, setHabitToDelete] = useState<HabitWithLog | null>(null);
 
   const fetchHabits = async () => {
@@ -141,7 +140,9 @@ export default function HabitsPage() {
         )}
 
         {loading ? (
-          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}</div>
+          <div className="space-y-2">{
+            [1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
+          </div>
         ) : habits.length === 0 && !showForm ? (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -151,8 +152,14 @@ export default function HabitsPage() {
             <div className={`p-4 rounded-full mb-4 ${EMPTY_STATE.iconBg}`}>
               {EMPTY_STATE.icon}
             </div>
-            <h3 className="text-sm font-semibold text-slate-800 mb-1">{EMPTY_STATE.title}</h3>
-            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">{EMPTY_STATE.desc}</p>
+            
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">
+              {EMPTY_STATE.title}
+            </h3>
+           
+            <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
+              {EMPTY_STATE.desc}
+            </p>
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-amber-500/20 hover:shadow-md hover:shadow-amber-500/30 cursor-pointer"
@@ -184,13 +191,23 @@ export default function HabitsPage() {
                   <p className={`text-sm font-medium ${habit.todayCompleted ? "line-through text-slate-400" : "text-slate-800"}`}>
                     {habit.name}
                   </p>
-                  {habit.description && <p className="text-xs text-slate-400 truncate">{habit.description}</p>}
+                  
+                  { habit.description && 
+                    <p className="text-xs text-slate-400 truncate">
+                      {habit.description}
+                    </p>
+                  }
                 </div>
+
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="flex items-center gap-1 text-amber-500">
                     <Flame size={14} className={habit.todayCompleted ? "opacity-50" : ""} />
-                    <span className="text-sm font-bold">{habit.streak_count}</span>
+                    
+                    <span className="text-sm font-bold">
+                      {habit.streak_count}
+                    </span>
                   </div>
+
                   <button 
                     onClick={() => initiateDelete(habit)} 
                     className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer"
@@ -205,7 +222,7 @@ export default function HabitsPage() {
         )}
       </div>
 
-      {/* ✅ Reusable Confirm Modal for Deletion */}
+      {/* Reusable Confirm Modal for Deletion */}
       <ConfirmModal
         isOpen={!!habitToDelete}
         onClose={() => setHabitToDelete(null)}
