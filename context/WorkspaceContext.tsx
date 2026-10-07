@@ -28,9 +28,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   // Initialize the SSR client at the top of the component!
   const supabase = createClient(); 
-
-  // for debugging in development
-  const isDev = process.env.NODE_ENV === 'development';
   
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace | null>(null);
@@ -44,13 +41,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     
     // ❌ Removed: const supabase = createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (isDev) {
-      console.log("🔍 [DEBUG] Auth Check -> User:", user);
-    }
-
-    if (isDev){
-      console.log("🔍 [DEBUG] 2. Auth Check -> User:", user, "Error:", userError);
-    }
+   
+    // Add Debug 1 and 2 here for auth check 
 
     if (userError || !user) {
       setWorkspaces([]);
@@ -60,9 +52,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isDev){
-      console.log("🔍 [DEBUG] 3. Fetching from DB for user_id:", user.id);
-    }
+
+    // Debug 3 for fetching from DB
 
     const { data, error } = await supabase
       .from("workspaces")
@@ -71,9 +62,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       .eq("is_active", true)
       .order("created_at");
 
-    if (isDev){
-      console.log("🔍 [DEBUG] 4. DB Response -> Data:", data, "Error:", error);
-    }
+    // Debug 4 for Response
     
     if (!error && data && data.length > 0) {
       const seen = new Set<string>();

@@ -107,7 +107,10 @@ export default function TasksPageClient({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Tasks</h1>
-            <p className="text-sm text-slate-500">{activeWorkspace?.name ?? "All workspaces"}</p>
+            
+            <p className="text-sm text-slate-500">
+              {activeWorkspace?.name ?? "All workspaces"}
+            </p>
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
@@ -148,12 +151,15 @@ export default function TasksPageClient({
             <div className={cn("p-4 rounded-full mb-4", TASK_EMPTY_STATES[filter].iconBg)}>
               {TASK_EMPTY_STATES[filter].icon}
             </div>
+
             <h3 className="text-sm font-semibold text-slate-800 mb-1">
               {TASK_EMPTY_STATES[filter].title}
             </h3>
+
             <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
               {TASK_EMPTY_STATES[filter].desc}
             </p>
+            
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-violet-500/20 hover:shadow-md hover:shadow-violet-500/30 cursor-pointer"

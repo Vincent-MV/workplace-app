@@ -36,6 +36,7 @@ export default function OverdueActions({
             onChange={(e) => onSetRescheduleDate(e.target.value)}
             className="px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
+
           <button
             onClick={() => onReschedule(task)}
             disabled={!rescheduleDate}
@@ -43,6 +44,7 @@ export default function OverdueActions({
           >
             Save
           </button>
+
           <button
             onClick={() => onSetReschedulingId(null)}
             className="text-xs text-slate-400 hover:text-slate-600 hover:underline cursor-pointer"
@@ -58,6 +60,7 @@ export default function OverdueActions({
           >
             <Calendar size={11} /> Reschedule
           </button>
+          
           <button
             onClick={() => onMarkDone(task)}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"

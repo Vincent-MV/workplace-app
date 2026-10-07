@@ -55,6 +55,7 @@ export default function MeetingForm({ onClose, onSaved }: MeetingFormProps) {
       <div className="flex justify-between items-center border-b border-slate-100 pb-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-700">New Meeting</h3>
+
           {activeWorkspace && (
             <p className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
               Adding to:
@@ -66,9 +67,14 @@ export default function MeetingForm({ onClose, onSaved }: MeetingFormProps) {
               </span>
             </p>
           )}
+
         </div>
-        <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-          <X size={16} />
+        
+        <button 
+              type="button" 
+              onClick={onClose} 
+              className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+              <X size={16} />
         </button>
       </div>
 

@@ -7,12 +7,12 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import { Image, Plus, AlertCircle } from "lucide-react";
 import { MAX_PHOTOS } from "@/lib/actions/UploadPhotos";
-import { deletePhotoAction } from "@/lib/actions/deletePhotos"; // ✅ Import the action
+import { deletePhotoAction } from "@/lib/actions/deletePhotos"; // Import the action
 
 import UploadPhotoModal from "./UploadPhotosModal";
 import PhotoGridItem from "./PhotoGridItem";
 
-// Note: Ensure 'Photo' is in your lib/types.ts
+// Ensure 'Photo' is in your lib/types.ts
 type Photo = { id: string; user_id: string; title: string; image_url: string; uploaded_at: string };
 
 export default function PhotosPage() {
@@ -23,7 +23,7 @@ export default function PhotosPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // ✅ Track which photo is currently being deleted
+  // rack which photo is currently being deleted
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchPhotos = async () => {
@@ -36,7 +36,7 @@ export default function PhotosPage() {
 
   useEffect(() => { fetchPhotos(); }, [userId]);
 
-  // ✅ The Brain Function: Handles the actual deletion
+  // The Brain Function: Handles the actual deletion
   const handleDeletePhoto = async (photo: Photo) => {
     if (!userId) return;
     
@@ -63,13 +63,16 @@ export default function PhotosPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Photos</h1>
+
             <p className="text-sm text-slate-500">Your visual memory bank</p>
+
             {isLimitReached && (
               <p className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
                 <AlertCircle size={12} /> Limit reached: You can only upload {MAX_PHOTOS} photos.
               </p>
             )}
           </div>
+
           <button 
             onClick={() => setIsModalOpen(true)}
             disabled={isLimitReached}
@@ -95,7 +98,9 @@ export default function PhotosPage() {
             <div className="p-4 rounded-full mb-4 bg-violet-100">
               <Image size={40} className="text-violet-500" />
             </div>
+
             <h3 className="text-sm font-semibold text-slate-800 mb-1">Capture your moments! 📸</h3>
+
             <p className="text-xs text-slate-500 max-w-[280px] mb-6 leading-relaxed">
               Upload your first photo to start building your visual library. Keep it under 10MB.
             </p>
@@ -109,7 +114,7 @@ export default function PhotosPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {photos.map((p) => (
-              // ✅ Pass the brain function down to the child
+              // Pass the brain function down to the child
               <PhotoGridItem 
                 key={p.id} 
                 photo={p} 
