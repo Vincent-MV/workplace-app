@@ -88,8 +88,20 @@ export function useLoginForm(onAuthSuccess?: () => void) {
   };
 
   return {
-    isSignUp, email, emailError, password, passwordError, loading, message,
-    handleEmailChange, handlePasswordChange, handleAuth, toggleAuthMode,
-    setEmailError, setPasswordError, validateEmail, validatePassword
+    isSignUp, 
+    email, 
+    emailError,
+    password, 
+    passwordError, 
+    loading, 
+    message,
+    handleEmailChange, 
+    handlePasswordChange, 
+    handleAuth, 
+    toggleAuthMode,
+    setEmailError, 
+    setPasswordError, 
+    validateEmail, 
+    validatePassword
   };
 }

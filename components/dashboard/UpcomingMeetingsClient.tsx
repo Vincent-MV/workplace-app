@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { Meeting } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 import { Calendar, MapPin, Clock, Trash2, Plus } from "lucide-react";
@@ -25,6 +25,8 @@ export default function UpcomingMeetingsClient({ initialMeetings }: Props) {
 
   const wsMap = Object.fromEntries(workspaces.map((w) => [w.id, w]));
 
+  const supabase = createClient();
+
   const handleDelete = async (meetingId: string) => {
     // 1. Optimistic UI update
     setMeetings((prev) => prev.filter((m) => m.id !== meetingId));
@@ -40,13 +42,19 @@ export default function UpcomingMeetingsClient({ initialMeetings }: Props) {
   if (meetings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-2xl bg-slate-50/50 border border-dashed border-slate-200">
+       
         <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mb-3">
           <Calendar size={28} />
         </div>
-        <h3 className="text-sm font-semibold text-slate-800 mb-1">No meetings in the next 7 days</h3>
+
+        <h3 className="text-sm font-semibold text-slate-800 mb-1">
+          No meetings in the next 7 days
+        </h3>
+
         <p className="text-xs text-slate-500 max-w-[260px] mb-5">
           Your calendar is clear! Schedule a meeting to collaborate with your team and stay aligned.
         </p>
+
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-500/20 hover:shadow-md cursor-pointer"
@@ -84,21 +92,31 @@ export default function UpcomingMeetingsClient({ initialMeetings }: Props) {
               style={{ borderLeft: `3px solid ${ws?.color ?? "#94a3b8"}` }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{m.title}</p>
+                
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {m.title}
+                </p>
+
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
+
                   <span className="flex items-center gap-1 text-xs text-slate-500">
                     <Clock size={11} />
                     {formatDateTime(m.scheduled_at)}
                   </span>
+
                   {m.location && (
                     <span className="flex items-center gap-1 text-xs text-slate-400 truncate">
                       <MapPin size={11} />
                       {m.location}
                     </span>
                   )}
+
                 </div>
+
                 {m.agenda && (
-                  <p className="text-xs text-slate-400 mt-1 line-clamp-1">{m.agenda}</p>
+                  <p className="text-xs text-slate-400 mt-1 line-clamp-1">
+                    {m.agenda}
+                  </p>
                 )}
               </div>
               

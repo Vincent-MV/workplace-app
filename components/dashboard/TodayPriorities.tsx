@@ -1,5 +1,4 @@
-// components/dashboard/TodayPriorities.tsx
-// 🚨 NO "use client" here!
+// Server Component
 
 import { createClient } from "@/lib/supabase/server";
 import { todayISO } from "@/lib/utils";
