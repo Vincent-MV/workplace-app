@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { supabase } from '@/lib/supabase';
+import { createClient } from "@/lib/supabase/client";
 import { Sparkles, AlertTriangle, Clock, CheckCircle2, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ export default function DailyBriefing() {
   const [loading, setLoading] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
 
+  const supabase = createClient();
   useEffect(() => {
     if (!activeWorkspace) return;
     
@@ -156,8 +157,13 @@ export default function DailyBriefing() {
                   >
                     <div className="mt-0.5 flex-shrink-0">{ui.icon}</div>
                     <div className="flex-1 min-w-0">
-                      <p className={cn("text-xs font-bold mb-1", ui.text)}>{ui.label}</p>
-                      <p className="text-sm font-medium text-slate-800 truncate">{reminder.title}</p>
+                      <p className={cn("text-xs font-bold mb-1", ui.text)}>
+                        {ui.label}
+                      </p>
+                      
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {reminder.title}
+                      </p>
                     </div>
                   </div>
                 );

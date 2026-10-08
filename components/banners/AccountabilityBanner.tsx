@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import type { Task } from "@/lib/types";
 import { todayISO, daysAgo } from "@/lib/utils";
 import { AlertTriangle, CheckCircle, Calendar } from "lucide-react";
@@ -29,6 +29,9 @@ interface Props {
 }
 
 export default function AccountabilityBanner({ refreshKey }: Props) {
+
+  const supabase = createClient();
+
   const { workspaces, isDemo } = useWorkspace();
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -112,17 +115,21 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
   return (
     <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-slide-down">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        
         <div className="flex items-start gap-2 flex-1 min-w-0">
           <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
+        
             <p className="text-sm text-amber-900 font-medium leading-snug">
               Did you finish{" "}
               <span className="font-bold">&ldquo;{task.title}&rdquo;</span>?
             </p>
+        
             <p className="text-xs text-amber-600 mt-0.5">
               Was due {agoLabel} — you didn&apos;t confirm this yet.
             </p>
           </div>
+        
           {overdueTasks.length > 1 && (
             <div className="flex items-center gap-1 flex-shrink-0">
               <button
@@ -131,17 +138,17 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
                 className="text-amber-600 disabled:opacity-30 text-xs px-1"
               >
                 ‹
-              </button>
-              <span className="text-xs text-amber-600 whitespace-nowrap">
-                {currentIdx + 1}/{overdueTasks.length}
-              </span>
-              <button
-                onClick={() =>
-                  setCurrentIdx((i) => Math.min(overdueTasks.length - 1, i + 1))
-                }
-                disabled={currentIdx === overdueTasks.length - 1}
-                className="text-amber-600 disabled:opacity-30 text-xs px-1"
-              >
+                    </button>
+                        <span className="text-xs text-amber-600 whitespace-nowrap">
+                          {currentIdx + 1}/{overdueTasks.length}
+                        </span>
+                    <button
+                      onClick={() =>
+                        setCurrentIdx((i) => Math.min(overdueTasks.length - 1, i + 1))
+                      }
+                      disabled={currentIdx === overdueTasks.length - 1}
+                      className="text-amber-600 disabled:opacity-30 text-xs px-1"
+                    >
                 ›
               </button>
             </div>
@@ -157,12 +164,14 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
             <CheckCircle size={13} />
             Yes, done
           </button>
+
           <button
             onClick={() => setShowReschedule((s) => !s)}
             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 rounded-lg text-xs font-medium transition-colors"
           >
             <Calendar size={13} />
             No — Reschedule
+            
           </button>
           <button
             onClick={() => setDismissed(true)}

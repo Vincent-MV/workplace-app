@@ -70,9 +70,11 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
           >
             <ChevronLeft size={18} />
           </button>
+
           <span className="text-sm font-bold text-slate-800">
             {monthName.split(" ")[0]}
           </span>
+          
           <button
             onClick={nextMonth}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors"
@@ -119,7 +121,10 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
                   : "hover:bg-slate-100 text-slate-600 font-medium"
               )}
             >
-              <span className="text-sm leading-none">{day}</span>
+              <span className="text-sm leading-none">
+                {day}
+              </span>
+              
               {dots.length > 0 && (
                 <div className="flex gap-0.5 mt-1 absolute bottom-1">
                   {dots.map((color, di) => (
@@ -139,11 +144,15 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
       {/* Popover for selected day */}
       {selectedDay && selected && (
         <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 animate-slide-down">
+        
           <p className="text-xs font-bold text-slate-700 mb-2">
             {monthName.split(" ")[0]} {selectedDay}
           </p>
+
           {selected.dayTasks.length === 0 && selected.dayMeetings.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">Nothing scheduled</p>
+            <p className="text-xs text-slate-400 italic">
+              Nothing scheduled
+            </p>
           ) : (
             <div className="space-y-1.5">
               {selected.dayTasks.map((t) => (
@@ -152,7 +161,11 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: wsMap[t.workspace_id]?.color ?? "#94a3b8" }}
                   />
-                  <span className="text-xs text-slate-600 truncate font-medium">{t.title}</span>
+                  
+                  <span className="text-xs text-slate-600 truncate font-medium">
+                    {t.title}
+                  </span>
+                
                 </div>
               ))}
               {selected.dayMeetings.map((m) => (
