@@ -17,12 +17,12 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 interface Props {
-  initialTasks: Task[]; // ✅ 2. REMOVED onChanged from props
+  initialTasks: Task[]; // 2. REMOVED onChanged from props
 }
 
 
 export default function TodayPrioritiesClient({ initialTasks }: Props) {
-  const router = useRouter(); // ✅ 3. Initialize router
+  const router = useRouter(); //  3. Initialize router
   const { workspaces } = useWorkspace();
   
   const [activeTasks, setActiveTasks] = useState<Task[]>(
@@ -59,7 +59,7 @@ export default function TodayPrioritiesClient({ initialTasks }: Props) {
     // Update database
     await supabase.from("tasks").update({ status: isCompleting ? "done" : "todo" }).eq("id", task.id);
     
-    // ✅ 4. Tell Next.js to re-fetch the Server Component data
+    //  4. Tell Next.js to re-fetch the Server Component data
     router.refresh(); 
   };
 
@@ -79,7 +79,7 @@ export default function TodayPrioritiesClient({ initialTasks }: Props) {
     // Update database
     await supabase.from("tasks").delete().eq("id", taskToDelete.id);
     
-    // ✅ 5. Tell Next.js to re-fetch the Server Component data
+    //  5. Tell Next.js to re-fetch the Server Component data
     router.refresh(); 
   };
 
@@ -251,7 +251,7 @@ export default function TodayPrioritiesClient({ initialTasks }: Props) {
             onClose={() => setIsAddModalOpen(false)} 
             onSaved={() => { 
                 setIsAddModalOpen(false); 
-                router.refresh(); // ✅ 6. Refresh data when a new task is added
+                router.refresh(); // 6. Refresh data when a new task is added
             }} 
             />
         )}

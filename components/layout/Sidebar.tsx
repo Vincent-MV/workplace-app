@@ -66,13 +66,18 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 overflow-hidden w-64 flex-shrink-0">
       {/* Header (Untouched) */}
+
       <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
+      
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 flex items-center justify-center">
+      
+          <figure className="w-9 h-9 flex items-center justify-center">
             <Image alt="Nexus Logo" src={Logo} width={36} height={36} className="rounded-md"  style={{ width: 'auto', height: 'auto' }}/>
-          </div>
+          </figure>
+      
           <span className="font-bold text-white text-sm tracking-wide">Nexus</span>
         </div>
+
         {onClose && (
           <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
             <X size={16} />
@@ -163,6 +168,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
         {/* ── WORKSPACE CONTENT ── */}
         {activeWorkspace && (
           <div className="px-3 mb-4">
+            
             <div className="flex items-center gap-1.5 px-2 mb-2">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeWorkspace.color }} />
               <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: activeWorkspace.color }}>
@@ -197,6 +203,7 @@ export default function Sidebar({ onClose, onAddWorkspace, onLogoutClick }: Side
 
         {/* ── GLOBAL ── */}
         <div className="px-3 mb-4">
+
           <div className="flex items-center gap-1.5 px-2 mb-1">
             <Globe size={11} className="text-slate-500" />
             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Global</p>

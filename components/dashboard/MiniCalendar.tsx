@@ -87,7 +87,7 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
         </span>
       </div>
 
-      {/* ✅ 3. Day labels changed to dark/black so they are easily visible */}
+      {/* Day labels changed to dark/black so they are easily visible */}
       <div className="grid grid-cols-7 mb-2">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
           <div key={i} className="text-center text-xs font-bold text-slate-900 py-1">
@@ -113,7 +113,7 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
               onClick={() => setSelectedDay(sel ? null : day)}
               className={cn(
                 "flex flex-col items-center justify-center h-9 w-full rounded-lg transition-all relative",
-                // ✅ 4. Changed today highlight to light blue (bg-blue-500)
+                // 4. Changed today highlight to light blue (bg-blue-500)
                 active
                   ? "bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20"
                   : sel
@@ -155,6 +155,7 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
             </p>
           ) : (
             <div className="space-y-1.5">
+
               {selected.dayTasks.map((t) => (
                 <div key={t.id} className="flex items-center gap-2">
                   <span
@@ -168,19 +169,23 @@ export default function MiniCalendar({ tasks, meetings, workspaces }: MiniCalend
                 
                 </div>
               ))}
+
               {selected.dayMeetings.map((m) => (
                 <div key={m.id} className="flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: wsMap[m.workspace_id]?.color ?? "#94a3b8" }}
                   />
+                  
                   <span className="text-xs text-slate-600 truncate font-medium">
                     {formatDateTime(m.scheduled_at)} · {m.title}
                   </span>
                 </div>
               ))}
+
             </div>
           )}
+
         </div>
       )}
     </div>

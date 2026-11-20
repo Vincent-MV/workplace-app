@@ -78,6 +78,7 @@ export default function UpcomingMeetingsClient({ initialMeetings }: Props) {
 
   return (
     <div className="space-y-2">
+      
       <AnimatePresence mode="popLayout">
         {meetings.map((m) => {
           const ws = wsMap[m.workspace_id];
