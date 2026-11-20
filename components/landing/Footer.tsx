@@ -21,14 +21,18 @@ export default function Footer() {
           {/* Brand & Socials */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
+
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
                 <span className="text-white font-bold text-sm">N</span>
               </div>
+
               <span className="text-lg font-semibold text-white">Nexus</span>
             </div>
+
             <p className="text-sm text-zinc-400 mb-6 max-w-xs">
               Your second brain for productivity, learning, and growth.
             </p>
+
             <div className="flex gap-3">
               {SOCIAL_LINKS.map((social) => (
                 <a
@@ -41,6 +45,7 @@ export default function Footer() {
                 </a>
               ))}
             </div>
+
           </div>
 
           {/* ✅ Contact for Inquiries */}
@@ -61,11 +66,14 @@ export default function Footer() {
 
         {/* Newsletter */}
         <div className="mt-12 pt-8 border-t border-white/10">
+
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            
             <div>
               <h4 className="text-white font-semibold mb-1">Stay in the loop</h4>
               <p className="text-sm text-zinc-400">Get the latest updates and tips.</p>
             </div>
+            
             <div className="flex gap-2">
               <input
                 type="email"
@@ -76,7 +84,9 @@ export default function Footer() {
                 <ArrowRight size={16} />
               </button>
             </div>
+
           </div>
+
         </div>
 
         {/* ✅ Bottom Bar: Cleaned up */}

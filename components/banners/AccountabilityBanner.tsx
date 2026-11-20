@@ -122,7 +122,10 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
         
             <p className="text-sm text-amber-900 font-medium leading-snug">
               Did you finish{" "}
-              <span className="font-bold">&ldquo;{task.title}&rdquo;</span>?
+              
+              <span className="font-bold">
+                  &ldquo;{task.title}&rdquo;
+              </span>?
             </p>
         
             <p className="text-xs text-amber-600 mt-0.5">
@@ -131,12 +134,15 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
           </div>
         
           {overdueTasks.length > 1 && (
+            
             <div className="flex items-center gap-1 flex-shrink-0">
+            
               <button
                 onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
                 disabled={currentIdx === 0}
                 className="text-amber-600 disabled:opacity-30 text-xs px-1"
               >
+            
                 ‹
                     </button>
                         <span className="text-xs text-amber-600 whitespace-nowrap">
@@ -173,6 +179,7 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
             No — Reschedule
             
           </button>
+
           <button
             onClick={() => setDismissed(true)}
             className="text-amber-400 hover:text-amber-600 text-xs px-1 transition-colors"
@@ -180,6 +187,7 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
           >
             ✕
           </button>
+
         </div>
       </div>
 
@@ -207,6 +215,7 @@ export default function AccountabilityBanner({ refreshKey }: Props) {
           </button>
         </div>
       )}
+      
     </div>
   );
 }

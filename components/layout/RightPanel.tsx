@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+// import Link from "next/link";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { supabase } from "@/lib/supabase";
 import type { Task, Meeting } from "@/lib/types";
@@ -44,10 +44,12 @@ export default function RightPanel({ refreshKey, onAskAI, onClose }: RightPanelP
   return (
     <div className="flex flex-col w-full h-full bg-white border-l border-slate-200 shadow-xl lg:shadow-none">
       {/* Header with close button */}
+      
       <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0 flex items-center justify-between">
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
           Overview
         </h2>
+
         {onClose && (
           <button
             onClick={onClose}
@@ -61,11 +63,11 @@ export default function RightPanel({ refreshKey, onAskAI, onClose }: RightPanelP
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
+
         <div className="p-3 border-b border-slate-100">
           <MiniCalendar tasks={tasks} meetings={meetings} workspaces={workspaces} />
         </div>
 
-        
       </div>
 
       {/* AI Button */}
@@ -78,6 +80,7 @@ export default function RightPanel({ refreshKey, onAskAI, onClose }: RightPanelP
           <span>Ask AI Secretary</span>
         </button>
       </div>
+
     </div>
   );
 }

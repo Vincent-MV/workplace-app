@@ -118,6 +118,7 @@ export default function DailyBriefing() {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm transition-all duration-300">
       {/* Header */}
+
       <div className="flex items-center justify-between p-4 border-b border-slate-100">
         <button 
           onClick={() => setIsMinimized(!isMinimized)}
@@ -132,6 +133,7 @@ export default function DailyBriefing() {
       {/* Content */}
       {!isMinimized && (
         <div className="p-4">
+          
           {loading ? (
             <div className="space-y-3">
               <div className="h-14 bg-slate-100 rounded-xl animate-pulse" />
@@ -170,8 +172,10 @@ export default function DailyBriefing() {
               })}
             </div>
           )}
+
         </div>
       )}
+      
     </div>
   );
 }
