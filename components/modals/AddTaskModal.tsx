@@ -91,8 +91,9 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Task title *</label>
+            <label htmlFor="title-task" className="block text-xs font-medium text-slate-600 mb-1">Task title *</label>
             <input
+              id="title-task"
               autoFocus
               type="text"
               value={title}
@@ -106,8 +107,9 @@ export default function AddTaskModal({ onClose, onSaved }: Props) {
 
           {/* Due date */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Due date</label>
+            <label htmlFor="date-task" className="block text-xs font-medium text-slate-600 mb-1">Due date</label>
             <input
+              id="date-task"
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}

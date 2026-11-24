@@ -63,7 +63,10 @@ export default function AddWorkspaceModal({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      
+      {/* Refactor */}
+      <div role="button" className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm animate-slide-up">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h2 className="text-base font-semibold text-slate-800">New Workspace</h2>
@@ -74,8 +77,9 @@ export default function AddWorkspaceModal({ onClose }: Props) {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Name *</label>
+            <label htmlFor="workplace-name" className="block text-xs font-medium text-slate-600 mb-1">Name *</label>
             <input
+              id="workplace-name"
               autoFocus
               type="text"
               value={name}
@@ -86,10 +90,11 @@ export default function AddWorkspaceModal({ onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-2">Color</label>
+            <label htmlFor="workplace-color" className="block text-xs font-medium text-slate-600 mb-2">Color</label>
             <div className="flex flex-wrap gap-2">
               {COLOR_PALETTE.map((c) => (
                 <button
+                  id="workplace-color"
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}

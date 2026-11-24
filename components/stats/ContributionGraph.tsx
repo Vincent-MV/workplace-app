@@ -115,6 +115,8 @@ export default function ContributionGraph({ activityData }: ContributionGraphPro
   // Generate available years (current year and 2 previous years)
   const availableYears = [currentYear, currentYear - 1, currentYear - 2];
 
+  {/* Refactor Theres a simpler version of this */}
+
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
       <div className="flex items-center justify-between mb-4">

@@ -96,8 +96,9 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
           
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Meeting title *</label>
+            <label htmlFor="meeting" className="block text-xs font-medium text-slate-600 mb-1">Meeting title *</label>
             <input
+              id="meeting"
               autoFocus
               type="text"
               value={title}
@@ -110,8 +111,9 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
           {/* Date & Time + Duration */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Date & time *</label>
+              <label htmlFor="date" className="block text-xs font-medium text-slate-600 mb-1">Date & time *</label>
               <input
+                id="date"
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
@@ -119,10 +121,11 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Duration</label>
+              <label htmlFor="duration" className="block text-xs font-medium text-slate-600 mb-1">Duration</label>
               <div className="flex gap-1.5">
                 {DURATIONS.map((min) => (
                   <button
+                    id="duration"
                     key={min}
                     type="button"
                     onClick={() => setDurationMins(min)}
@@ -153,8 +156,9 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
           {showAdvanced && (
             <div className="space-y-4 animate-slide-down">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Location</label>
+                <label htmlFor="location" className="block text-xs font-medium text-slate-600 mb-1">Location</label>
                 <input
+                  id="location"
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
@@ -164,8 +168,9 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Agenda</label>
+                <label htmlFor="agenda" className="block text-xs font-medium text-slate-600 mb-1">Agenda</label>
                 <textarea
+                  id="agenda"
                   ref={textareaRef}
                   value={agenda}
                   onChange={(e) => setAgenda(e.target.value)}
@@ -182,6 +187,7 @@ export default function AddMeetingModal({ onClose, onSaved }: Props) {
 
           {/* Submit Button (Sticky at bottom if needed, but here it flows naturally) */}
           <div className="pt-2">
+            
             <button
               type="submit"
               disabled={loading}
